@@ -8,6 +8,7 @@ if __name__ == '__main__':
 
     print("hello welcome to this chaos")
     view.launch()
+    print("Hello")
 
 
 
