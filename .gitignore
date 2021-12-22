@@ -6,6 +6,20 @@ __pycache__/
 # C extensions
 *.so
 
+# other
+.DS_Store
+.idea/
+# exclude everything
+report_texts/*
+reports_temp/*
+reports/*
+
+# exception to the rule
+report_texts/.gitkeep
+reports_temp/.gitkeep
+reports/.gitkeep
+
+
 # Distribution / packaging
 .Python
 build/
