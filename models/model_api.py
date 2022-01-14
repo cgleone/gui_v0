@@ -1,6 +1,6 @@
 import copy
 
-class model_api(object):
+class ModelApi(object):
     """
     Tag extraction model API for Capstone
     """
