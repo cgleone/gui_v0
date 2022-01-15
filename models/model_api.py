@@ -4,6 +4,7 @@ class ModelApi(object):
     """
     Tag extraction model API for Capstone
     """
+    result_keys = ['modality', 'body_part', 'dr_name', 'clinic_name', 'date_of_procedure']
 
     def __init__(self):
         self.state = {}
