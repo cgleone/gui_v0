@@ -1,5 +1,6 @@
 from model_api import ModelApi
 import dateparser
+import warnings
 import re
 
 class MinimalModel(ModelApi):
@@ -74,14 +75,14 @@ class MinimalModel(ModelApi):
                 body_parts.sort(key=lambda x: x.span()[0])  # Sort by position in text
                 results['body_part'] = body_parts[0].group()  # Take first one by position
             
-            m = re.search(self.parameters['date_expr'], text)
+            m = re.search(self.parameters['date_regex'], text)
             if m is not None:
                 date = m.group().split(':')[-1].strip()
-                results['date_of_procedure'] = dateparser.parse(date)
+                # Supress warnings from dateparser
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    results['date_of_procedure'] = dateparser.parse(date)
 
-            # Deal with the case that nothing is found
-            for k in self.result_keys:
-                if results.get(k, None) is None:
-                    results[k] = 'Model found no tags'
-            
+            # Put Nones where nothing was found
+            [results.setdefault(k, None) for k in self.result_keys]
             self.results.append(results)
