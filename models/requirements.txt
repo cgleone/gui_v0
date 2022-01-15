@@ -1,0 +1,20 @@
+# ML packages
+numpy
+pandas
+scipy
+scikit-learn
+torch
+seaborn
+matplotlib
+jupyter
+
+# NLP
+nltk
+transformers
+farm-haystack
+thefuzz
+
+# Misc
+dateparser
+python-Levenshtein
+tqdm
