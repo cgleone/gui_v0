@@ -58,7 +58,6 @@ class View(QMainWindow):
     def set_table_row_count(self, row_count):
         self.report_table.setRowCount(row_count)
 
-
     def create_table_grid(self):
         self.report_table = QTableWidget()
         self.report_table.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -78,8 +77,10 @@ class View(QMainWindow):
         for i in range(len(report_data)):
             row_data = report_data[i]
             for j in range(len(row_data)):
-                cell_data = row_data[j]
+                cell_data = row_data[j][0][0]
+
                 self.report_table.setItem(i, j, QTableWidgetItem(cell_data))
+
 
     def populate_title_layout(self):
        # self.title_layout.addWidget(QLabel("Patient Portal Demo"))

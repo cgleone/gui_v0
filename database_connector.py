@@ -33,25 +33,29 @@ class DB_Connection:
         return
 
     def generate_report_id(self):
-        if self.get_row_count("reports") == 0:
-            return 1
+        # if self.get_row_count() == 0:
+        #     return 1
 
         query = "SELECT MAX(Report_ID) FROM reports"
         self.cursor.execute(query)
         max_id = self.cursor.fetchall()[0][0]
         return max_id + 1
 
-    def get_row_count(self, table_name):
-        query = "SELECT COUNT(*) FROM " + table_name
-        self.cursor.execute(query, table_name)
-        return self.cursor.fetchall()
+    def get_row_count(self, patient=None):
+        if id is None:
+            self.cursor.execute("SELECT COUNT(*) FROM reports")
+            return self.cursor.fetchall()[0][0]
+
+        query = "SELECT COUNT(*) FROM reports WHERE Patient_ID='%s'"
+        self.cursor.execute(query % patient)
+        return self.cursor.fetchall()[0][0]
 
     def get_report_IDs(self, patient_ID):
         query = "SELECT Report_ID FROM reports WHERE Patient_ID='%s'"
         self.cursor.execute(query % patient_ID)
         rows = self.cursor.fetchall()
         print(rows)
-        return
+        return rows
 
     def get_report_date(self, report_ID):
         query = "SELECT Exam_Date FROM labels WHERE Report_ID='%s'"
@@ -84,7 +88,7 @@ class DB_Connection:
         return self.cursor.fetchall()
 
     def get_report_name(self, report_ID):
-        query = "SELECT Report_name FROM labels WHERE Report_ID='%s'"
+        query = "SELECT Report_name FROM reports WHERE Report_ID='%s'"
         self.cursor.execute(query % report_ID)
         return self.cursor.fetchall()
 

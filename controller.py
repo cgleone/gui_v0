@@ -21,10 +21,10 @@ class Controller:
         self.view.filter_button.clicked.connect(self.filter_selection)
         self.view.dialog_button.clicked.connect(self.apply_filters)
 
-
     def import_file(self):
         self.view.show_directory()
         self.model.import_report(self.view.explorer)
+        self.populate_report_info()
 
     def filter_selection(self):
         self.view.show_dialog()
@@ -35,6 +35,8 @@ class Controller:
 
     def populate_report_info(self):
         reports = self.model.get_reports_to_display()
+        rows = self.model.db_connection.get_row_count(patient=self.model.current_patient_ID)
+        self.view.set_table_row_count(rows)
         self.view.populate_report_table(reports)
 
         # populate report info

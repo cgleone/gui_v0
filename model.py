@@ -21,12 +21,12 @@ patient_id = 22
 class Model():
 
     def __init__(self):
-        self.hello = "hello"
         self.db_connection = DB_Connection()
 
         self.current_patient_ID = None
         self.current_filters = None
 
+        self.set_current_patient_ID(22)
 
     def set_current_patient_ID(self, ID):
         self.current_patient_ID = ID
@@ -62,9 +62,6 @@ class Model():
         file.write(result)
         file.close()
 
-
-
-
     def set_filters(self, modalities, bodyparts, hospitals):
 
         checked_filters = []
@@ -86,7 +83,7 @@ class Model():
             for id in report_IDs:
                 display = [self.db_connection.get_report_date(id), self.db_connection.get_report_name(id),
                            self.db_connection.get_report_modality(id), self.db_connection.get_report_bodypart(id),
-                           "None"]
+                           [["None"]]]
                 display_data.append(display)
 
         return display_data
