@@ -61,20 +61,20 @@ def get_new_name(path):
 
 def prep_image(file):
 
-    path = 'OCR/reports_temp/' + file
-    delete_after = False
-    new_name = file
+    og_path = 'OCR/reports_temp/' + file
+
     if file.endswith('.pdf'):
-        path = convert_pdf(path)
-        new_name = file.rstrip('.pdf') + '.jpg'
-        delete_after = False
+        jpg_path = convert_pdf(og_path)
+        os.remove(og_path)
 
-    if delete_after:
-        os.remove(path)  # get rid of the extra image file once we're done with it, if we made one
+    else:
+        jpg_path = og_path
 
-    return path.split('/')[-1]
+    return jpg_path.split('/')[-1]
 
 
 def run_ocr(file_name):
+    print("filename: ")
+    print(file_name)
     prepped = prep_image(file_name)
     return get_text(prepped)
