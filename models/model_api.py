@@ -86,35 +86,3 @@ class ModelApi(object):
         """Model does training based on input data. Stores trained parameters in self.parameters"""
         raise NotImplementedError()
     
-     
-"""
-results dict structure
-----------------------
-res = {
-    'body_part': {
-        'label': 'arm',
-        'probability': 0.96,
-        'text': 'hand'
-    },
-    'modality':{
-        'label': 'MR',
-        'probability': 0.6,
-        'text': 'MRI'
-    }
-}
-
-Using API:
-----------
-Training:
-model = model_api()
-model.update_inputs(training_data, labels)
-model.train()
-state = model.get_state()
-params = model.get_parameters()
-
-Inference:
-model = model_api()  # Initialization
-model.set_state(state)  # Load saved state/params
-model.set_parameters(params)
-results = model.predict(input_data) # Make predictions
-"""
