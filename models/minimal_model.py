@@ -44,7 +44,7 @@ class MinimalModel(ModelApi):
         Doctors: Search in report for string.
         Imaging clinics: search in report for string.
         """
-        for text in self.input_data:
+        for key, text in self.input_data.items():
             results = {}
             # Search capitalized text
 
@@ -84,5 +84,5 @@ class MinimalModel(ModelApi):
                     results['date_of_procedure'] = dateparser.parse(date)
 
             # Put Nones where nothing was found
-            [results.setdefault(k, None) for k in self.result_keys]
-            self.results.append(results)
+            [results.setdefault(k, None) for k in self.RESULT_KEYS]
+            self.results.setdefault(key, results)

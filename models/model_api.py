@@ -4,12 +4,12 @@ class ModelApi(object):
     """
     Tag extraction model API for Capstone
     """
-    result_keys = ['modality', 'body_part', 'dr_name', 'clinic_name', 'date_of_procedure']
+    RESULT_KEYS = ['modality', 'body_part', 'dr_name', 'clinic_name', 'date_of_procedure']
 
     def __init__(self):
         self.state = {}
         self.parameters = {}
-        self.results = []
+        self.results = {}
         self.input_data = None
 
     def get_state(self):
@@ -34,8 +34,12 @@ class ModelApi(object):
         """
         Parameters:
         -----------
-        input_data: list of strings that are texts to train/evaluate
-        labels: list of dict, has same structure as results
+        input_data: dict of strings
+            Keys are the ID of the text
+            Values are texts to train/evaluate
+        labels: dict of dict
+            Keys are same as input_data
+            Values have same structure as results
         """
         self.input_data = input_data
         self.state['labels'] = labels
@@ -57,7 +61,7 @@ class ModelApi(object):
         results: list of dict of dict
         """
         results = self.results
-        self.results = []
+        self.results = {}
         return results
     
     def predict(self, input_data):
@@ -66,13 +70,13 @@ class ModelApi(object):
 
         Parameters:
         -----------
-        input_data: list of str
-            Input texts
+        input_data: dict of str
+            Input texts and associated IDs as keys
         
         Returns:
         --------
-        results: list of dict of dict
-            List of result dictionaries for each input text
+        results: dict of dict
+            Dictionary of result dictionaries for each input text associated with original IDs
         """
         self.update_inputs(input_data)
         self.update_results()
