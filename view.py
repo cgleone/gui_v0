@@ -1,4 +1,5 @@
 import os
+from time import sleep
 
 import controller
 
@@ -11,7 +12,7 @@ import PyQt5.QtWebEngineWidgets
 #import PyQt5.QtGui.QAbstractItemView.NoEditTriggers
 
 
-from PyQt5.QtCore import Qt, QStringListModel, QTextStream
+from PyQt5.QtCore import Qt, QStringListModel, QTextStream, QObject, pyqtSignal, QThread
 
 from PyQt5.QtWidgets import QGridLayout, QLabel, QToolBar, QStatusBar, QDialog, QTableWidgetItem, QHeaderView, \
     QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox
@@ -172,6 +173,27 @@ class View(QMainWindow):
         dialog_layout.addWidget(viewer)
         dialog.exec()
 
+    def create_thread(self, controller):
+        self.thread = QThread()
+        # Step 3: Create a worker object
+        self.worker = Worker()
+        # Step 4: Move worker to the thread
+        self.worker.moveToThread(self.thread)
+        # Step 5: Connect signals and slots
+        self.worker.set_controller(controller)
+        self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.thread.quit)
+        # self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.hello_testing)
+        # self.worker.progress.connect(self.reportProgress)
+        # Step 6: Start the thread
+        #self.thread.start()
+        return self.thread
+
+    def import_enabled(self, enable):
+        self.import_button.setEnabled(enable)
+
+
 
 class PDFReport(PyQt5.QtWebEngineWidgets.QWebEngineView):
     def load_pdf(self, filename):
@@ -201,3 +223,19 @@ class ReportViewer(QWidget):
 
         lay = QVBoxLayout(self)
         lay.addWidget(self.pdf)
+
+
+class Worker(QObject):
+    finished = pyqtSignal()
+    start = pyqtSignal()
+    def run(self):
+        """Long-running task."""
+        self.start.emit()
+        self.controller.thread_interior()
+        #
+
+        self.finished.emit()
+
+    def set_controller(self, controller):
+        self.controller = controller
+

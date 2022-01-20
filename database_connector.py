@@ -92,8 +92,13 @@ class DB_Connection:
         self.cursor.execute(query % report_ID)
         return self.cursor.fetchall()
 
-    def get_report_ID(self, ):
-        return
+    def search_by_label(self, column, label_value):
+        query = "SELECT Report_ID FROM labels WHERE '%s'='%s'"
+        self.cursor.execute(query % column, label_value)
+        return self.cursor.fetchall()
+
+
+
 
 # test_db = DB_Connection()
 # test_db.get_report_IDs(4)

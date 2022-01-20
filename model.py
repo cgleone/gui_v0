@@ -4,7 +4,6 @@ import os
 from database_connector import DB_Connection
 from temp_nlp import generate_random_tags
 
-
 # temp patient id
 patient_id = 22
 #
@@ -112,5 +111,22 @@ class Model():
             print("this file is {} and is not a pdf".format(name))
             isPDF = False
         return filepath, isPDF, name
+
+
+    # def filter_by_label(self, desired_labels, category=None):
+    #     if category is None:
+    #         self.get_category(desired_labels)
+
+
+    # def get_category(self, labels):
+    #     categories = []
+    #     for label in labels:
+
+
+    def set_category_dict(self):
+        self.category_dict = {"Modality": ["MRI", "CT", "Ultrasound", "X-ray"],
+                              "Bodypart": ["Head and Neck", "Chest", "Abdomen", "Upper Limbs", "Lower Limbs", "Other"],
+                              "Institution": ["Hospital", ]}
+
 
 
