@@ -25,9 +25,9 @@ class Controller:
     def view_report(self, row, col):
         filename, isPDF, name = self.model.view_report(row, col)
         if isPDF:
-            self.view.display_pdf(filename, name)
-        # else:
-        #     self.view.display_image_report(filename)
+            self.view.display_pdf(filename, name, row, col)
+        else:
+             self.view.display_image_report(filename, name)
 
     def import_file(self):
         self.view.show_directory()

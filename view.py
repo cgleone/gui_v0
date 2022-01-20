@@ -1,6 +1,8 @@
 import os
 from time import sleep
 
+from PyQt5.QtGui import QPixmap, QBrush, QColor, QFont
+
 import controller
 
 import sys
@@ -12,7 +14,8 @@ import PyQt5.QtWebEngineWidgets
 #import PyQt5.QtGui.QAbstractItemView.NoEditTriggers
 
 
-from PyQt5.QtCore import Qt, QStringListModel, QTextStream, QObject, pyqtSignal, QThread
+from PyQt5.QtCore import Qt, QStringListModel, QTextStream, QObject, pyqtSignal, QThread, QRect, QPersistentModelIndex, \
+    QEvent, QModelIndex
 
 from PyQt5.QtWidgets import QGridLayout, QLabel, QToolBar, QStatusBar, QDialog, QTableWidgetItem, QHeaderView, \
     QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox
@@ -65,7 +68,7 @@ class View(QMainWindow):
     def create_table_grid(self):
         self.report_table = QTableWidget()
         self.report_table.setEditTriggers(QTableWidget.NoEditTriggers)
-
+        self.report_table.setMouseTracking(True)
         self.report_table.setColumnCount(5)
 
         self.report_table.setHorizontalHeaderLabels(['Date Added', 'File Name', 'Imaging Modality', 'Body Part', 'Notes'])
@@ -74,6 +77,22 @@ class View(QMainWindow):
         self.report_table.verticalHeader().setVisible(False)
         self.table_grid.addWidget(self.report_table)
 
+        self.current_hover = [0, 0]
+        self.report_table.cellEntered.connect(self.cell_hover)
+
+    def cell_hover(self, row, column):
+        underlined = QFont()
+        underlined.setUnderline(True)
+        normal = QFont()
+        self.report_table.setCursor(Qt.PointingHandCursor)
+        item = self.report_table.item(row, column)
+        old_item = self.report_table.item(self.current_hover[0], self.current_hover[1])
+        if self.current_hover != [row,column]:
+            old_item.setBackground(QBrush(QColor('white')))
+            item.setBackground(QBrush(QColor('#E0EEEE')))
+            old_item.setFont(normal)
+            item.setFont(underlined)
+        self.current_hover = [row, column]
 
     def populate_report_table(self, report_data):
         if report_data is None:
@@ -161,7 +180,9 @@ class View(QMainWindow):
                                  "Abdomen": QCheckBox("Abdomen"), "Upper Limbs": QCheckBox("Upper Limbs"),
                                  "Lower Limbs": QCheckBox("Lower Limbs"), "Other": QCheckBox("Other")}
 
-    def display_pdf(self, filename, report_name):
+    def display_pdf(self, filename, report_name, row, col):
+        item = self.report_table.item(row, col)
+        item.setBackground(QBrush(QColor('white')))
 
         viewer = ReportViewer(filename)
         viewer.show()
@@ -172,6 +193,22 @@ class View(QMainWindow):
         dialog.setLayout(dialog_layout)
         dialog_layout.addWidget(viewer)
         dialog.exec()
+
+    def display_image_report(self, filename, report_name):
+        dialog = QDialog()
+        dialog.setWindowTitle(report_name)
+        dialog_layout = QGridLayout()
+        dialog.setLayout(dialog_layout)
+        dialog.setFixedSize(800, 700)
+
+        image = QLabel()
+        image.setPixmap(QPixmap(filename))
+        image.setScaledContents(True)
+        dialog_layout.addWidget(image)
+
+        dialog.exec()
+
+
 
     def create_thread(self, controller):
         self.thread = QThread()
@@ -184,7 +221,6 @@ class View(QMainWindow):
         self.thread.started.connect(self.worker.run)
         self.worker.finished.connect(self.thread.quit)
         # self.worker.finished.connect(self.worker.deleteLater)
-        self.thread.finished.connect(self.hello_testing)
         # self.worker.progress.connect(self.reportProgress)
         # Step 6: Start the thread
         #self.thread.start()
@@ -239,3 +275,29 @@ class Worker(QObject):
     def set_controller(self, controller):
         self.controller = controller
 
+
+class TableWidget(QTableWidget):
+    cellExited = pyqtSignal(int, int)
+    itemExited = pyqtSignal(QTableWidgetItem)
+
+    def __init__(self, rows, columns, parent=None):
+        QTableWidget.__init__(self, rows, columns, parent)
+        self._last_index = QPersistentModelIndex()
+        self.viewport().installEventFilter(self)
+
+    def eventFilter(self, widget, event):
+        if widget is self.viewport():
+            index = self._last_index
+            if event.type() == QEvent.MouseMove:
+                index = self.indexAt(event.pos())
+            elif event.type() == QEvent.Leave:
+                index = QModelIndex()
+            if index != self._last_index:
+                row = self._last_index.row()
+                column = self._last_index.column()
+                item = self.item(row, column)
+                if item is not None:
+                    self.itemExited.emit(item)
+                self.cellExited.emit(row, column)
+                self._last_index = QPersistentModelIndex(index)
+        return QTableWidget.eventFilter(self, widget, event)
