@@ -3,17 +3,20 @@ import os
 import controller
 
 import sys
-
 # Import QApplication and the required widgets from PyQt5.QtWidgets
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtWidgets import QWidget
+import PyQt5.QtWebEngineWidgets
 #import PyQt5.QtGui.QAbstractItemView.NoEditTriggers
+
 
 from PyQt5.QtCore import Qt, QStringListModel, QTextStream
 
 from PyQt5.QtWidgets import QGridLayout, QLabel, QToolBar, QStatusBar, QDialog, QTableWidgetItem, QHeaderView, \
     QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox
+
+CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 class View(QMainWindow):
     """Test App View (GUI)."""
@@ -23,7 +26,7 @@ class View(QMainWindow):
 
         # window size and title
         self.setWindowTitle("FYDP GUI Test")
-        self.setFixedSize(600,500)
+        self.setFixedSize(1000,700)
         self._createMainWidget()
         self.create_buttons()
         self.create_user_inputs()
@@ -79,7 +82,11 @@ class View(QMainWindow):
             for j in range(len(row_data)):
                 cell_data = row_data[j][0][0]
 
+                # if j == 1:
+                #     self.report_table.setItem(i, j, custom_widgets.ClickableLabel(cell_data, i, click_event))
+                # else:
                 self.report_table.setItem(i, j, QTableWidgetItem(cell_data))
+
 
 
     def populate_title_layout(self):
@@ -153,3 +160,44 @@ class View(QMainWindow):
                                  "Abdomen": QCheckBox("Abdomen"), "Upper Limbs": QCheckBox("Upper Limbs"),
                                  "Lower Limbs": QCheckBox("Lower Limbs"), "Other": QCheckBox("Other")}
 
+    def display_pdf(self, filename, report_name):
+
+        viewer = ReportViewer(filename)
+        viewer.show()
+
+        dialog = QDialog()
+        dialog.setWindowTitle(report_name)
+        dialog_layout = QGridLayout()
+        dialog.setLayout(dialog_layout)
+        dialog_layout.addWidget(viewer)
+        dialog.exec()
+
+
+class PDFReport(PyQt5.QtWebEngineWidgets.QWebEngineView):
+    def load_pdf(self, filename):
+        path = os.path.join(CURRENT_DIR, filename)
+        url = PyQt5.QtCore.QUrl.fromLocalFile(path).toString()
+        print(url)
+        self.settings().setAttribute(
+            PyQt5.QtWebEngineWidgets.QWebEngineSettings.PluginsEnabled, True)
+        self.settings().setAttribute(
+            PyQt5.QtWebEngineWidgets.QWebEngineSettings.PdfViewerEnabled, True)
+        self.load(PyQt5.QtCore.QUrl.fromUserInput(url))
+
+        #self.load(PyQt5.QtCore.QUrl.fromUserInput("%s?file=%s" % (PDFJS, url)))
+        # self.load(PyQt5.QtCore.QUrl.fromUserInput(f'{PDFJS}?file={url}'))
+
+
+    def sizeHint(self):
+        return PyQt5.QtCore.QSize(700, 600)
+
+
+class ReportViewer(QWidget):
+    def __init__(self, filename, parent=None):
+        super(ReportViewer, self).__init__(parent)
+
+        self.pdf = PDFReport()
+        self.pdf.load_pdf(filename)
+
+        lay = QVBoxLayout(self)
+        lay.addWidget(self.pdf)

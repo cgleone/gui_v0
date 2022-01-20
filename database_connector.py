@@ -17,14 +17,14 @@ class DB_Connection:
     def add_patient(self, info):
         return
 
-    def add_report(self, patient, name, og_path, txt_path):
+    def add_report(self, patient, report_id, name, og_path, txt_path):
 
-        report_id = self.generate_report_id()
+       # report_id = self.generate_report_id()
         query = "INSERT INTO reports VALUES (%s, %s, %s, %s, %s)"
         data = (patient, report_id, name, og_path, txt_path)
         self.cursor.execute(query, data)
         self.db.commit()
-        return report_id
+       # return report_id
 
     def add_labels(self, info):
         query = "INSERT INTO labels VALUES (%s, %s, %s, %s, %s, %s, %s)"

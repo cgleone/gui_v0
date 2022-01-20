@@ -20,11 +20,20 @@ class Controller:
         self.view.import_button.clicked.connect(self.import_file)
         self.view.filter_button.clicked.connect(self.filter_selection)
         self.view.dialog_button.clicked.connect(self.apply_filters)
+        self.view.report_table.cellPressed.connect(self.view_report)
+
+    def view_report(self, row, col):
+        filename, isPDF, name = self.model.view_report(row, col)
+        if isPDF:
+            self.view.display_pdf(filename, name)
+        # else:
+        #     self.view.display_image_report(filename)
 
     def import_file(self):
         self.view.show_directory()
-        self.model.import_report(self.view.explorer)
-        self.populate_report_info()
+        if self.view.explorer:
+            self.model.import_report(self.view.explorer)
+            self.populate_report_info()
 
     def filter_selection(self):
         self.view.show_dialog()
