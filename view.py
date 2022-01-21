@@ -77,22 +77,26 @@ class View(QMainWindow):
         self.report_table.verticalHeader().setVisible(False)
         self.table_grid.addWidget(self.report_table)
 
-        self.current_hover = [0, 0]
+        self.current_hover = [0]
         self.report_table.cellEntered.connect(self.cell_hover)
 
-    def cell_hover(self, row, column):
+    def cell_hover(self, row):
         underlined = QFont()
         underlined.setUnderline(True)
         normal = QFont()
         self.report_table.setCursor(Qt.PointingHandCursor)
-        item = self.report_table.item(row, column)
-        old_item = self.report_table.item(self.current_hover[0], self.current_hover[1])
-        if self.current_hover != [row,column]:
-            old_item.setBackground(QBrush(QColor('white')))
-            item.setBackground(QBrush(QColor('#E0EEEE')))
-            old_item.setFont(normal)
-            item.setFont(underlined)
-        self.current_hover = [row, column]
+
+        col = 0
+        for i in range(0, 5):
+            item = self.report_table.item(row, col)
+            old_item = self.report_table.item(self.current_hover[0], col)
+            if self.current_hover != [row]:
+                old_item.setBackground(QBrush(QColor('white')))
+                item.setBackground(QBrush(QColor('#E0EEEE')))
+                old_item.setFont(normal)
+                item.setFont(underlined)
+            col = col + 1
+        self.current_hover = [row]
 
     def populate_report_table(self, report_data):
         if report_data is None:
