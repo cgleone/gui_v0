@@ -15,7 +15,7 @@ class MinimalModel(ModelApi):
         self.parameters['date_regex'] = expr
         
         # Body parts
-        body_parts = [' chest ', ' head ', ' abdomen ', ' pelvis ', ' spine ', ' arm ', ' leg ']
+        body_parts = ['head', 'spine', 'chest', 'abdomen', 'arm', 'leg', 'other']
         self.parameters['body_parts'] = body_parts
 
         # Imaging modalities
@@ -51,7 +51,14 @@ class MinimalModel(ModelApi):
             for modality in self.parameters['modalities']:
                 m = re.search(modality, text)
                 if m is not None:
-                    results['modality'] = m.group()
+                    # Force to be in the right output format
+                    modality = m.group().lower()
+                    if 'm' in modality:
+                        results['modality'] = 'mri'
+                    elif 'c' in modality:
+                        results['modality'] = 'ct'
+                    else:
+                        results['modality'] = 'xray'
                     break
             
             for dr_name in self.parameters['dr_names']:
@@ -74,6 +81,11 @@ class MinimalModel(ModelApi):
             if body_parts:
                 body_parts.sort(key=lambda x: x.span()[0])  # Sort by position in text
                 results['body_part'] = body_parts[0].group()  # Take first one by position
+                # Replace arm and leg with upper and lower limbs
+                if results['body_part'] == 'arm':
+                    results['body_part'] = 'upper_limb'
+                elif results['body_part'] == 'leg':
+                    results['body_part'] = 'lower_limb'
             
             m = re.search(self.parameters['date_regex'], text)
             if m is not None:
@@ -81,7 +93,7 @@ class MinimalModel(ModelApi):
                 # Supress warnings from dateparser
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    results['date_of_procedure'] = dateparser.parse(date)
+                    results['date_of_procedure'] = dateparser.parse(date).strftime('%Y-%m-%d')
 
             # Put Nones where nothing was found
             [results.setdefault(k, None) for k in self.RESULT_KEYS]
