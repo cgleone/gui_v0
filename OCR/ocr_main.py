@@ -70,7 +70,10 @@ def prep_image(file):
     else:
         jpg_path = og_path
 
-    return jpg_path.split('/')[-1]
+    if '\\' in jpg_path:
+        return jpg_path.split('\\')[-1]
+    else:
+        return jpg_path.split('/')[-1]
 
 
 def run_ocr(file_name):

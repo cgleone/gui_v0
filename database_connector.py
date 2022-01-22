@@ -6,11 +6,17 @@ class DB_Connection:
 
     def __init__(self):
 
+        # self.db = mysql.connect(
+        #     host="localhost",
+        #     user="root",
+        #     passwd="FYDP2022",
+        #     database="ReportData")
+
         self.db = mysql.connect(
             host="localhost",
             user="root",
-            passwd="FYDP2022",
-            database="ReportData")
+            passwd="#Darren89candiesEW!",
+            database="reportdata")
 
         self.cursor = self.db.cursor()
 

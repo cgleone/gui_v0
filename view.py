@@ -110,7 +110,8 @@ class View(QMainWindow):
         self.setStatusBar(status)
 
     def show_directory(self):
-        self.explorer = QFileDialog.getOpenFileName(self, 'Open File', '/Users/cathleenl/Documents/data_stuff')[0]
+        #self.explorer = QFileDialog.getOpenFileName(self, 'Open File', '/Users/cathleenl/Documents/data_stuff')[0]
+        self.explorer = QFileDialog.getOpenFileName(self, 'Open File', '/Users\Wong\PycharmProjects\ocr_testing\pics')[0]
 
     def show_dialog(self):
         self.dialog = QDialog()
