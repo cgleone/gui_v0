@@ -31,7 +31,7 @@ This is a simple model that searches for specific pieces of text as tags within 
 
 Both result and training label dictionaries have the same structure.
 
-['modality', 'body_part', 'dr_name', 'clinic_name', 'date_of_procedure']
+`['modality', 'body_part', 'dr_name', 'clinic_name', 'date_of_procedure']`
 
 ### Highest level keys:
 - `body_part`: This should be the body part imaged
