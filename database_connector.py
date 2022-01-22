@@ -23,14 +23,14 @@ class DB_Connection:
     def add_patient(self, info):
         return
 
-    def add_report(self, patient, name, og_path, txt_path):
+    def add_report(self, patient, report_id, name, og_path, txt_path):
 
-        report_id = self.generate_report_id()
+       # report_id = self.generate_report_id()
         query = "INSERT INTO reports VALUES (%s, %s, %s, %s, %s)"
         data = (patient, report_id, name, og_path, txt_path)
         self.cursor.execute(query, data)
         self.db.commit()
-        return report_id
+       # return report_id
 
     def add_labels(self, info):
         query = "INSERT INTO labels VALUES (%s, %s, %s, %s, %s, %s, %s)"
@@ -98,8 +98,13 @@ class DB_Connection:
         self.cursor.execute(query % report_ID)
         return self.cursor.fetchall()
 
-    def get_report_ID(self, ):
-        return
+    def search_by_label(self, column, label_value):
+        query = "SELECT Report_ID FROM labels WHERE '%s'='%s'"
+        self.cursor.execute(query % column, label_value)
+        return self.cursor.fetchall()
+
+
+
 
 # test_db = DB_Connection()
 # test_db.get_report_IDs(4)

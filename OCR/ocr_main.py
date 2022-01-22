@@ -80,4 +80,5 @@ def run_ocr(file_name):
     print("filename: ")
     print(file_name)
     prepped = prep_image(file_name)
+    print(prepped)
     return get_text(prepped)

@@ -1,19 +1,26 @@
 import os
+from time import sleep
+
+from PyQt5.QtGui import QPixmap, QBrush, QColor, QFont
 
 import controller
 
 import sys
-
 # Import QApplication and the required widgets from PyQt5.QtWidgets
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtWidgets import QWidget
+import PyQt5.QtWebEngineWidgets
 #import PyQt5.QtGui.QAbstractItemView.NoEditTriggers
 
-from PyQt5.QtCore import Qt, QStringListModel, QTextStream
+
+from PyQt5.QtCore import Qt, QStringListModel, QTextStream, QObject, pyqtSignal, QThread, QRect, QPersistentModelIndex, \
+    QEvent, QModelIndex
 
 from PyQt5.QtWidgets import QGridLayout, QLabel, QToolBar, QStatusBar, QDialog, QTableWidgetItem, QHeaderView, \
     QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox
+
+CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 class View(QMainWindow):
     """Test App View (GUI)."""
@@ -23,7 +30,7 @@ class View(QMainWindow):
 
         # window size and title
         self.setWindowTitle("FYDP GUI Test")
-        self.setFixedSize(600,500)
+        self.setFixedSize(1000,700)
         self._createMainWidget()
         self.create_buttons()
         self.create_user_inputs()
@@ -61,7 +68,7 @@ class View(QMainWindow):
     def create_table_grid(self):
         self.report_table = QTableWidget()
         self.report_table.setEditTriggers(QTableWidget.NoEditTriggers)
-
+        self.report_table.setMouseTracking(True)
         self.report_table.setColumnCount(5)
 
         self.report_table.setHorizontalHeaderLabels(['Date Added', 'File Name', 'Imaging Modality', 'Body Part', 'Notes'])
@@ -70,6 +77,26 @@ class View(QMainWindow):
         self.report_table.verticalHeader().setVisible(False)
         self.table_grid.addWidget(self.report_table)
 
+        self.current_hover = [0]
+        self.report_table.cellEntered.connect(self.cell_hover)
+
+    def cell_hover(self, row):
+        underlined = QFont()
+        underlined.setUnderline(True)
+        normal = QFont()
+        self.report_table.setCursor(Qt.PointingHandCursor)
+
+        col = 0
+        for i in range(0, 5):
+            item = self.report_table.item(row, col)
+            old_item = self.report_table.item(self.current_hover[0], col)
+            if self.current_hover != [row]:
+                old_item.setBackground(QBrush(QColor('white')))
+                item.setBackground(QBrush(QColor('#E0EEEE')))
+                old_item.setFont(normal)
+                item.setFont(underlined)
+            col = col + 1
+        self.current_hover = [row]
 
     def populate_report_table(self, report_data):
         if report_data is None:
@@ -79,7 +106,11 @@ class View(QMainWindow):
             for j in range(len(row_data)):
                 cell_data = row_data[j][0][0]
 
+                # if j == 1:
+                #     self.report_table.setItem(i, j, custom_widgets.ClickableLabel(cell_data, i, click_event))
+                # else:
                 self.report_table.setItem(i, j, QTableWidgetItem(cell_data))
+
 
 
     def populate_title_layout(self):
@@ -154,3 +185,124 @@ class View(QMainWindow):
                                  "Abdomen": QCheckBox("Abdomen"), "Upper Limbs": QCheckBox("Upper Limbs"),
                                  "Lower Limbs": QCheckBox("Lower Limbs"), "Other": QCheckBox("Other")}
 
+    def display_pdf(self, filename, report_name, row, col):
+        item = self.report_table.item(row, col)
+        item.setBackground(QBrush(QColor('white')))
+
+        viewer = ReportViewer(filename)
+        viewer.show()
+
+        dialog = QDialog()
+        dialog.setWindowTitle(report_name)
+        dialog_layout = QGridLayout()
+        dialog.setLayout(dialog_layout)
+        dialog_layout.addWidget(viewer)
+        dialog.exec()
+
+    def display_image_report(self, filename, report_name):
+        dialog = QDialog()
+        dialog.setWindowTitle(report_name)
+        dialog_layout = QGridLayout()
+        dialog.setLayout(dialog_layout)
+        dialog.setFixedSize(800, 700)
+
+        image = QLabel()
+        image.setPixmap(QPixmap(filename))
+        image.setScaledContents(True)
+        dialog_layout.addWidget(image)
+
+        dialog.exec()
+
+
+
+    def create_thread(self, controller):
+        self.thread = QThread()
+        # Step 3: Create a worker object
+        self.worker = Worker()
+        # Step 4: Move worker to the thread
+        self.worker.moveToThread(self.thread)
+        # Step 5: Connect signals and slots
+        self.worker.set_controller(controller)
+        self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.thread.quit)
+        # self.worker.finished.connect(self.worker.deleteLater)
+        # self.worker.progress.connect(self.reportProgress)
+        # Step 6: Start the thread
+        #self.thread.start()
+        return self.thread
+
+    def import_enabled(self, enable):
+        self.import_button.setEnabled(enable)
+
+
+
+class PDFReport(PyQt5.QtWebEngineWidgets.QWebEngineView):
+    def load_pdf(self, filename):
+        path = os.path.join(CURRENT_DIR, filename)
+        url = PyQt5.QtCore.QUrl.fromLocalFile(path).toString()
+        print(url)
+        self.settings().setAttribute(
+            PyQt5.QtWebEngineWidgets.QWebEngineSettings.PluginsEnabled, True)
+        self.settings().setAttribute(
+            PyQt5.QtWebEngineWidgets.QWebEngineSettings.PdfViewerEnabled, True)
+        self.load(PyQt5.QtCore.QUrl.fromUserInput(url))
+
+        #self.load(PyQt5.QtCore.QUrl.fromUserInput("%s?file=%s" % (PDFJS, url)))
+        # self.load(PyQt5.QtCore.QUrl.fromUserInput(f'{PDFJS}?file={url}'))
+
+
+    def sizeHint(self):
+        return PyQt5.QtCore.QSize(700, 600)
+
+
+class ReportViewer(QWidget):
+    def __init__(self, filename, parent=None):
+        super(ReportViewer, self).__init__(parent)
+
+        self.pdf = PDFReport()
+        self.pdf.load_pdf(filename)
+
+        lay = QVBoxLayout(self)
+        lay.addWidget(self.pdf)
+
+
+class Worker(QObject):
+    finished = pyqtSignal()
+    start = pyqtSignal()
+    def run(self):
+        """Long-running task."""
+        self.start.emit()
+        self.controller.thread_interior()
+        #
+
+        self.finished.emit()
+
+    def set_controller(self, controller):
+        self.controller = controller
+
+
+class TableWidget(QTableWidget):
+    cellExited = pyqtSignal(int, int)
+    itemExited = pyqtSignal(QTableWidgetItem)
+
+    def __init__(self, rows, columns, parent=None):
+        QTableWidget.__init__(self, rows, columns, parent)
+        self._last_index = QPersistentModelIndex()
+        self.viewport().installEventFilter(self)
+
+    def eventFilter(self, widget, event):
+        if widget is self.viewport():
+            index = self._last_index
+            if event.type() == QEvent.MouseMove:
+                index = self.indexAt(event.pos())
+            elif event.type() == QEvent.Leave:
+                index = QModelIndex()
+            if index != self._last_index:
+                row = self._last_index.row()
+                column = self._last_index.column()
+                item = self.item(row, column)
+                if item is not None:
+                    self.itemExited.emit(item)
+                self.cellExited.emit(row, column)
+                self._last_index = QPersistentModelIndex(index)
+        return QTableWidget.eventFilter(self, widget, event)
