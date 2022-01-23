@@ -14,7 +14,7 @@ class DB_Connection:
         self.db = mysql.connect(
             host="localhost",
             user="root",
-            passwd="#Darren89candiesEW!",
+            passwd="FYDP2022",
             database="reportdata")
 
         self.cursor = self.db.cursor()

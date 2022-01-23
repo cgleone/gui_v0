@@ -34,6 +34,7 @@ class View(QMainWindow):
         self._createMainWidget()
         self.create_buttons()
         self.create_user_inputs()
+        self.create_dialog_for_later()
 
         self._createLayouts()
 
@@ -70,10 +71,17 @@ class View(QMainWindow):
         self.report_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.report_table.setMouseTracking(True)
         self.report_table.setColumnCount(5)
+        header_font = QFont()
+        header_font.setBold(True)
+        header_font.setPointSize(12)
 
         self.report_table.setHorizontalHeaderLabels(['Date Added', 'File Name', 'Imaging Modality', 'Body Part', 'Notes'])
         self.report_table.horizontalHeader().setStretchLastSection(True)
+       # self.report_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.report_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.report_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+
+        self.report_table.horizontalHeader().setFont(header_font)
         self.report_table.verticalHeader().setVisible(False)
         self.table_grid.addWidget(self.report_table)
 
@@ -144,12 +152,14 @@ class View(QMainWindow):
         #self.explorer = QFileDialog.getOpenFileName(self, 'Open File', '/Users/cathleenl/Documents/data_stuff')[0]
         self.explorer = QFileDialog.getOpenFileName(self, 'Open File', '/Users\Wong\PycharmProjects\ocr_testing\pics')[0]
 
-    def show_dialog(self):
+    def create_dialog_for_later(self):
         self.dialog = QDialog()
         self.dialog.setWindowTitle("Select Filters")
         self.dialog_layout = QGridLayout()
         self.populate_dialog()
         self.dialog.setLayout(self.dialog_layout)
+
+    def show_dialog(self):
         self.dialog.exec()
 
 

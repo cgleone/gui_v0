@@ -8,8 +8,6 @@ __version__ = '0.1'
 __author__ = 'Tigger and Cathleen'
 
 
-
-
 def launch():
     """Main function."""
     # Create an instance of QApplication
@@ -22,6 +20,7 @@ def launch():
 
     # Execute the app's main loop
     sys.exit(app.exec_())
+
 
 if __name__ == '__main__':
     launch()
