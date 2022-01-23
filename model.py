@@ -25,6 +25,7 @@ class Model():
 
         self.current_patient_ID = None
         self.current_filters = None
+        self.current_columns = None
 
         self.set_current_patient_ID(22)
         self.current_display_data_with_IDs = None
@@ -63,25 +64,41 @@ class Model():
         label_args = [patient_id, report_id] + labels
         self.db_connection.add_labels(label_args)
 
-    def set_filters(self, modalities, bodyparts, hospitals):
+    def set_filters(self, modalities, bodyparts, dates):
 
-        checked_filters = []
-        for category in [modalities, bodyparts, hospitals]:
-            for key in category.keys():
-                if category[key].isChecked():
-                    checked_filters.append(key)
+        # for category in [modalities, bodyparts, dates]:
+        #     for key in category.keys():
+        #         if category[key].isChecked():
+        #             checked_filters.append(key)
+
+        checked_modalities = []
+        for key in modalities.keys():
+            if modalities[key].isChecked():
+                checked_modalities.append(key)
+
+        checked_bodyparts = []
+        for key in bodyparts.keys():
+            if bodyparts[key].isChecked():
+                checked_bodyparts.append(key)
+
+        checked_dates = []
+        for key in dates.keys():
+            if dates[key].isChecked():
+                checked_dates.append(key)
+
+        checked_filters = {"modality": checked_modalities, "bodypart": checked_bodyparts, "exam_date": checked_dates}
 
         self.current_filters = checked_filters
 
     def get_reports_to_display(self):
-        report_IDs = self.db_connection.get_report_IDs(self.current_patient_ID)
+        report_IDs = self.db_connection.get_report_IDs(self.current_patient_ID, self.current_filters)
         if report_IDs is None:
             return None
 
         display_data = []
         data_with_IDs = []
 
-        if self.current_filters is None:
+        if self.current_columns is None:
             for id in report_IDs:
                 display = [self.db_connection.get_report_date(id), self.db_connection.get_report_name(id),
                            self.db_connection.get_report_modality(id), self.db_connection.get_report_bodypart(id),

@@ -1,18 +1,29 @@
 
 import mysql.connector as mysql
 
-
 class DB_Connection:
 
     def __init__(self):
 
+        # self.db = mysql.connect(
+        #     host="localhost",
+        #     user="root",
+        #     passwd="FYDP2022",
+        #     database="ReportData")
+
         self.db = mysql.connect(
             host="localhost",
             user="root",
-            passwd="FYDP2022",
-            database="ReportData")
+            passwd="#Darren89candiesEW!",
+            database="reportdata")
 
         self.cursor = self.db.cursor()
+
+        self.date_filters = {"<6mos": "> date_sub(now(), interval 6 month)",
+                             "6mos-1yr": "between date_sub(now(), interval 1 year) "
+                                         "AND date_sub(now(), interval 6 month)",
+                             "1yr-5yrs": "between date_sub(now(), interval 5 year) AND date_sub(now(), interval 1 year)",
+                             ">5yrs": "< date_sub(now(), interval 5 year)"}
 
     def add_patient(self, info):
         return
@@ -50,17 +61,42 @@ class DB_Connection:
         self.cursor.execute(query % patient)
         return self.cursor.fetchall()[0][0]
 
-    def get_report_IDs(self, patient_ID):
-        query = "SELECT Report_ID FROM reports WHERE Patient_ID='%s'"
-        self.cursor.execute(query % patient_ID)
-        rows = self.cursor.fetchall()
-        print(rows)
-        return rows
+    def get_report_IDs(self, patient_ID, filters):
+        if filters is None:
+            query = "SELECT Report_ID FROM reports WHERE Patient_ID='%s'"
+            self.cursor.execute(query % patient_ID)
+            ids = self.cursor.fetchall()
+            print(ids)
+        else:
+            report_ids = []
+            test = 'modality'
+            for category in ["modality", "bodypart"]:
+                for option in filters[category]:
+                    query = "SELECT Report_ID FROM labels WHERE (Patient_ID='%s' and %s ='%s')"
+                    values = (patient_ID, category, option)
+                    self.cursor.execute(query % values)
+                    reports = self.cursor.fetchall()
+                    for report in reports:
+                        report_ids.append(report)
+            for option in filters["exam_date"]:
+                query = "SELECT Report_ID FROM labels WHERE (Patient_ID='%s' and exam_date %s)"
+                values = (patient_ID, self.date_filters[option])
+                self.cursor.execute(query % values)
+                reports = self.cursor.fetchall()
+                for report in reports:
+                    report_ids.append(report)
+            ids=list(dict.fromkeys(report_ids))
+            print(ids)
+
+
+        return ids
 
     def get_report_date(self, report_ID):
         query = "SELECT Exam_Date FROM labels WHERE Report_ID='%s'"
         self.cursor.execute(query % report_ID)
-        return self.cursor.fetchall()
+        datetime = self.cursor.fetchone()[-1]
+        date_string = datetime.strftime("%Y-%m-%d")
+        return [(date_string,),]
 
     def get_report_modality(self, report_ID):
         query = "SELECT Modality FROM labels WHERE Report_ID='%s'"

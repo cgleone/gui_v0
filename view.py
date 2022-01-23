@@ -148,7 +148,8 @@ class View(QMainWindow):
         self.setStatusBar(status)
 
     def show_directory(self):
-        self.explorer = QFileDialog.getOpenFileName(self, 'Open File', '/Users/cathleenl/Documents/data_stuff')[0]
+        #self.explorer = QFileDialog.getOpenFileName(self, 'Open File', '/Users/cathleenl/Documents/data_stuff')[0]
+        self.explorer = QFileDialog.getOpenFileName(self, 'Open File', '/Users\Wong\PycharmProjects\ocr_testing\pics')[0]
 
     def show_dialog(self):
         self.dialog = QDialog()
@@ -163,11 +164,11 @@ class View(QMainWindow):
         self.create_filter_options()
         self.dialog_layout.addWidget(QLabel("Imaging Modalities: "), 0, 0)
         self.dialog_layout.addWidget(QLabel("Body Parts: "), 0, 1)
-        self.dialog_layout.addWidget(QLabel("Facilities/Institutions: "), 0, 2)
+        self.dialog_layout.addWidget(QLabel("Date of Exam: "), 0, 2)
 
         max_rows = 1
         column = 0
-        for category in [self.mod_options, self.bodypart_options, self.hospital_options]:
+        for category in [self.mod_options, self.bodypart_options, self.date_options]:
             row = 1
             for value in category.values():
                 self.dialog_layout.addWidget(value, row, column)
@@ -185,8 +186,9 @@ class View(QMainWindow):
         # modalities
         self.mod_options = {"X-ray": QCheckBox("X-ray"), "MRI": QCheckBox("MRI"), "CT": QCheckBox("CT"),
                             "Ultrasound": QCheckBox("Ultrasound")}
-        self.hospital_options = {"St. Mary's Hospital": QCheckBox("St. Mary's Hospital"),
-                                 "Grand River Hospital": QCheckBox("Grand River Hospital")}
+        self.date_options = {"<6mos": QCheckBox("< 6mos"),
+                                 "6mos-1yr": QCheckBox("6mos - 1yr"), "1yr-5yrs": QCheckBox("1yr - 5yrs"),
+                             ">5yrs": QCheckBox("> 5 yrs")}
         self.bodypart_options = {"Head and Neck": QCheckBox("Head and Neck"), "Chest": QCheckBox("Chest"),
                                  "Abdomen": QCheckBox("Abdomen"), "Upper Limbs": QCheckBox("Upper Limbs"),
                                  "Lower Limbs": QCheckBox("Lower Limbs"), "Other": QCheckBox("Other")}
