@@ -34,6 +34,7 @@ class View(QMainWindow):
         self._createMainWidget()
         self.create_buttons()
         self.create_user_inputs()
+        self.create_dialog_for_later()
 
         self._createLayouts()
 
@@ -151,12 +152,14 @@ class View(QMainWindow):
         #self.explorer = QFileDialog.getOpenFileName(self, 'Open File', '/Users/cathleenl/Documents/data_stuff')[0]
         self.explorer = QFileDialog.getOpenFileName(self, 'Open File', '/Users\Wong\PycharmProjects\ocr_testing\pics')[0]
 
-    def show_dialog(self):
+    def create_dialog_for_later(self):
         self.dialog = QDialog()
         self.dialog.setWindowTitle("Select Filters")
         self.dialog_layout = QGridLayout()
         self.populate_dialog()
         self.dialog.setLayout(self.dialog_layout)
+
+    def show_dialog(self):
         self.dialog.exec()
 
 
