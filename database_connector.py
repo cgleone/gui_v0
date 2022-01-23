@@ -68,25 +68,26 @@ class DB_Connection:
             ids = self.cursor.fetchall()
             print(ids)
         else:
-            report_ids = []
-            test = 'modality'
-            for category in ["modality", "bodypart"]:
-                for option in filters[category]:
-                    query = "SELECT Report_ID FROM labels WHERE (Patient_ID='%s' and %s ='%s')"
-                    values = (patient_ID, category, option)
+            mod_bp_ids=[]
+            query = "SELECT Report_ID FROM labels WHERE modality in %s and bodypart in %s"
+            values = (filters["modality"], filters["bodypart"])
+            self.cursor.execute(query % values)
+            reports = self.cursor.fetchall()
+            for report in reports:
+                mod_bp_ids.append(report[0])
+            if len(mod_bp_ids)==0:
+                return []
+            else:
+                if len(filters["exam_date"]) ==0: return mod_bp_ids
+                report_ids=[]
+                for option in filters["exam_date"]:
+                    query = "SELECT Report_ID FROM labels WHERE (Patient_ID='%s' and Report_ID in %s and exam_date %s)"
+                    values = (patient_ID, tuple(mod_bp_ids), self.date_filters[option])
                     self.cursor.execute(query % values)
                     reports = self.cursor.fetchall()
                     for report in reports:
                         report_ids.append(report)
-            for option in filters["exam_date"]:
-                query = "SELECT Report_ID FROM labels WHERE (Patient_ID='%s' and exam_date %s)"
-                values = (patient_ID, self.date_filters[option])
-                self.cursor.execute(query % values)
-                reports = self.cursor.fetchall()
-                for report in reports:
-                    report_ids.append(report)
-            ids=list(dict.fromkeys(report_ids))
-            print(ids)
+                ids=report_ids
 
 
         return ids

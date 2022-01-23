@@ -30,6 +30,10 @@ class Model():
         self.set_current_patient_ID(22)
         self.current_display_data_with_IDs = None
 
+        self.filter_options = {"modalities": ["X-ray", "MRI", "CT", "Ultrasound"],
+                               "bodyparts": ["Head and neck", "Chest", "Abdomen", "Upper Limbs", "Lower Limbs", "Other"],
+                               "exam_date":["<6mos", "6mos-1yr", "1yr-5yrs", ">5yrs"]}
+
     def set_current_patient_ID(self, ID):
         self.current_patient_ID = ID
 
@@ -75,20 +79,32 @@ class Model():
         for key in modalities.keys():
             if modalities[key].isChecked():
                 checked_modalities.append(key)
+        checked_modalities = self.get_checked_datatype(checked_modalities, "modalities")
 
         checked_bodyparts = []
         for key in bodyparts.keys():
             if bodyparts[key].isChecked():
                 checked_bodyparts.append(key)
+        checked_bodyparts = self.get_checked_datatype(checked_bodyparts, "bodyparts")
 
         checked_dates = []
         for key in dates.keys():
             if dates[key].isChecked():
                 checked_dates.append(key)
+        # checked_dates = self.get_checked_datatype(checked_dates, "exam_date")
 
         checked_filters = {"modality": checked_modalities, "bodypart": checked_bodyparts, "exam_date": checked_dates}
 
         self.current_filters = checked_filters
+
+    def get_checked_datatype(self, list, category):
+        if len(list) == 0:
+            return tuple(self.filter_options[category])
+        elif len(list) == 1:
+            single_filter = "('{}')".format(list[0])
+            return single_filter
+        else:
+            return tuple(list)
 
     def get_reports_to_display(self):
         report_IDs = self.db_connection.get_report_IDs(self.current_patient_ID, self.current_filters)
