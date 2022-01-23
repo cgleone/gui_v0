@@ -70,10 +70,17 @@ class View(QMainWindow):
         self.report_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.report_table.setMouseTracking(True)
         self.report_table.setColumnCount(5)
+        header_font = QFont()
+        header_font.setBold(True)
+        header_font.setPointSize(12)
 
         self.report_table.setHorizontalHeaderLabels(['Date Added', 'File Name', 'Imaging Modality', 'Body Part', 'Notes'])
         self.report_table.horizontalHeader().setStretchLastSection(True)
+       # self.report_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.report_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.report_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+
+        self.report_table.horizontalHeader().setFont(header_font)
         self.report_table.verticalHeader().setVisible(False)
         self.table_grid.addWidget(self.report_table)
 
