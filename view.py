@@ -251,7 +251,6 @@ class PDFReport(PyQt5.QtWebEngineWidgets.QWebEngineView):
     def load_pdf(self, filename):
         path = os.path.join(CURRENT_DIR, filename)
         url = PyQt5.QtCore.QUrl.fromLocalFile(path).toString()
-        print(url)
         self.settings().setAttribute(
             PyQt5.QtWebEngineWidgets.QWebEngineSettings.PluginsEnabled, True)
         self.settings().setAttribute(

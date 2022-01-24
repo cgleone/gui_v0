@@ -3,6 +3,7 @@ from OCR import ocr_main
 import os
 from database_connector import DB_Connection
 from temp_nlp import generate_random_tags
+import pandas as pd
 
 # temp patient id
 patient_id = 22
@@ -106,10 +107,13 @@ class Model():
         else:
             return tuple(list)
 
-    def get_reports_to_display(self):
-        report_IDs = self.db_connection.get_report_IDs(self.current_patient_ID, self.current_filters)
-        if report_IDs is None:
-            return None
+    def get_reports_to_display(self, filtered_IDs=None):
+        if filtered_IDs is None:
+            report_IDs = self.db_connection.get_report_IDs(self.current_patient_ID, self.current_filters)
+            if report_IDs is None:
+                return None
+        else:
+            report_IDs = filtered_IDs
 
         display_data = []
         data_with_IDs = []
@@ -130,6 +134,7 @@ class Model():
         display_data.reverse()
         data_with_IDs.reverse()
         self.current_display_data_with_IDs = data_with_IDs
+        print("display data: {}".format(display_data))
         return display_data
 
     def view_report(self, row, col):
@@ -146,20 +151,45 @@ class Model():
         return filepath, isPDF, name
 
 
-    # def filter_by_label(self, desired_labels, category=None):
-    #     if category is None:
-    #         self.get_category(desired_labels)
-
-
-    # def get_category(self, labels):
-    #     categories = []
-    #     for label in labels:
-
-
     def set_category_dict(self):
         self.category_dict = {"Modality": ["MRI", "CT", "Ultrasound", "X-ray"],
                               "Bodypart": ["Head and Neck", "Chest", "Abdomen", "Upper Limbs", "Lower Limbs", "Other"],
                               "Institution": ["Hospital", ]}
 
+
+    def begin_search(self, user_query):
+        # do some logic to break it into pieces
+        # step 1 - check for institutions / clinicians
+        # step 2 - check for other labels
+        # step 3 - look through OCR text
+
+        return self.get_institution_ids(user_query)
+
+    def apply_search_labels(self, labels):
+        all_ids = []
+        for label in labels:
+            ids = self.db_connection.search_by_label(label)
+            all_ids = all_ids + ids
+        print(all_ids)
+        return all_ids
+
+
+    def get_institution_ids(self, user_query):
+
+        # assume user query exactly matches institution short form from list
+        self.read_csv()
+        short_forms = self.all_institutions['Short forms']
+        desired_institutions = []
+        for i in range(len(short_forms)):
+            if user_query == short_forms[i]:
+                inst = self.all_institutions['Names'][i]
+                desired_institutions.append(inst)
+        print(desired_institutions)
+        ids = self.apply_search_labels(desired_institutions)
+        return ids
+
+    def read_csv(self):
+        self.all_institutions = pd.read_csv('institution_list.csv')
+        print(self.all_institutions)
 
 

@@ -1,4 +1,4 @@
-
+import pandas as pd
 #
 #
 # class SearchBar:
@@ -12,3 +12,11 @@
 #
 #
 # class SearchQuery(SearchBar):
+
+
+def read_csv():
+    all_institutions = pd.read_csv('institution_list.csv')
+    print(all_institutions)
+
+
+read_csv()

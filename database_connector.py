@@ -66,7 +66,6 @@ class DB_Connection:
             query = "SELECT Report_ID FROM reports WHERE Patient_ID='%s'"
             self.cursor.execute(query % patient_ID)
             ids = self.cursor.fetchall()
-            print(ids)
         else:
             mod_bp_ids=[]
             query = "SELECT Report_ID FROM labels WHERE modality in %s and bodypart in %s"
@@ -129,11 +128,10 @@ class DB_Connection:
         self.cursor.execute(query % report_ID)
         return self.cursor.fetchall()
 
-    def search_by_label(self, column, label_value):
-        query = "SELECT Report_ID FROM labels WHERE '%s'='%s'"
-        self.cursor.execute(query % column, label_value)
+    def search_by_label(self, label):
+        query = "SELECT Report_ID FROM labels WHERE Institution='%s' OR Modality='%s' OR Bodypart='%s' OR Clinician='%s'"
+        self.cursor.execute(query % (label, label, label, label))
         return self.cursor.fetchall()
-
 
 
 
