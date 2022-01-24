@@ -57,9 +57,8 @@ class Controller:
 
     def apply_filters(self):
         self.model.set_filters(self.view.mod_options, self.view.bodypart_options, self.view.date_options)
-        # self.get_report_info_to_display()
-        self.reports = self.model.get_reports_to_display()
-        self.rows = len(self.reports)
+        report_IDs = self.model.get_filtered_ids()
+        self.get_report_info_to_display(report_IDs)
         self.display_report_info()
         self.view.close_dialog()
 

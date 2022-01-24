@@ -14,16 +14,11 @@ class DB_Connection:
         self.db = mysql.connect(
             host="localhost",
             user="root",
-            passwd="FYDP2022",
+            passwd="#Darren89candiesEW!",
             database="reportdata")
 
         self.cursor = self.db.cursor()
 
-        self.date_filters = {"<6mos": "> date_sub(now(), interval 6 month)",
-                             "6mos-1yr": "between date_sub(now(), interval 1 year) "
-                                         "AND date_sub(now(), interval 6 month)",
-                             "1yr-5yrs": "between date_sub(now(), interval 5 year) AND date_sub(now(), interval 1 year)",
-                             ">5yrs": "< date_sub(now(), interval 5 year)"}
 
     def add_patient(self, info):
         return
@@ -61,35 +56,21 @@ class DB_Connection:
         self.cursor.execute(query % patient)
         return self.cursor.fetchall()[0][0]
 
-    def get_report_IDs(self, patient_ID, filters):
-        if filters is None:
-            query = "SELECT Report_ID FROM reports WHERE Patient_ID='%s'"
-            self.cursor.execute(query % patient_ID)
-            ids = self.cursor.fetchall()
-        else:
-            mod_bp_ids=[]
-            query = "SELECT Report_ID FROM labels WHERE modality in %s and bodypart in %s"
-            values = (filters["modality"], filters["bodypart"])
-            self.cursor.execute(query % values)
-            reports = self.cursor.fetchall()
-            for report in reports:
-                mod_bp_ids.append(report[0])
-            if len(mod_bp_ids)==0:
-                return []
-            else:
-                if len(filters["exam_date"]) ==0: return mod_bp_ids
-                report_ids=[]
-                for option in filters["exam_date"]:
-                    query = "SELECT Report_ID FROM labels WHERE (Patient_ID='%s' and Report_ID in %s and exam_date %s)"
-                    values = (patient_ID, tuple(mod_bp_ids), self.date_filters[option])
-                    self.cursor.execute(query % values)
-                    reports = self.cursor.fetchall()
-                    for report in reports:
-                        report_ids.append(report)
-                ids=report_ids
-
-
+    def get_report_IDs(self, patient_ID):
+        query = "SELECT Report_ID FROM reports WHERE Patient_ID='%s'"
+        self.cursor.execute(query % patient_ID)
+        ids = self.cursor.fetchall()
         return ids
+
+    def get_mod_bd_IDs(self, values):
+        query = "SELECT Report_ID FROM labels WHERE Patient_ID='%s' and modality in %s and bodypart in %s"
+        self.cursor.execute(query % values)
+        return self.cursor.fetchall()
+
+    def get_filtered_date_IDs(self, values):
+        query = "SELECT Report_ID FROM labels WHERE (Patient_ID='%s' and Report_ID in %s and exam_date %s)"
+        self.cursor.execute(query % values)
+        return self.cursor.fetchall()
 
     def get_report_date(self, report_ID):
         query = "SELECT Exam_Date FROM labels WHERE Report_ID='%s'"

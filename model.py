@@ -27,16 +27,30 @@ class Model():
         self.current_patient_ID = None
         self.current_filters = None
         self.current_columns = None
+        self.filter_options = None
+        self.date_filters = None
 
         self.set_current_patient_ID(22)
+        self.set_filter_options()
+        self.set_date_filters()
         self.current_display_data_with_IDs = None
 
-        self.filter_options = {"modalities": ["X-ray", "MRI", "CT", "Ultrasound"],
-                               "bodyparts": ["Head and neck", "Chest", "Abdomen", "Upper Limbs", "Lower Limbs", "Other"],
-                               "exam_date":["<6mos", "6mos-1yr", "1yr-5yrs", ">5yrs"]}
 
     def set_current_patient_ID(self, ID):
         self.current_patient_ID = ID
+
+    def set_filter_options(self):
+        self.filter_options = {"modalities": ["X-ray", "MRI", "CT", "Ultrasound"],
+                               "bodyparts": ["Head and neck", "Chest", "Abdomen", "Upper Limbs", "Lower Limbs",
+                                             "Other"],
+                               "exam_date": ["<6mos", "6mos-1yr", "1yr-5yrs", ">5yrs"]}
+
+    def set_date_filters(self):
+        self.date_filters = {"<6mos": "> date_sub(now(), interval 6 month)",
+                             "6mos-1yr": "between date_sub(now(), interval 1 year) "
+                                         "AND date_sub(now(), interval 6 month)",
+                             "1yr-5yrs": "between date_sub(now(), interval 5 year) AND date_sub(now(), interval 1 year)",
+                             ">5yrs": "< date_sub(now(), interval 5 year)"}
 
     def import_report(self, path):
         filename = path.split('/')[-1]
@@ -70,12 +84,6 @@ class Model():
         self.db_connection.add_labels(label_args)
 
     def set_filters(self, modalities, bodyparts, dates):
-
-        # for category in [modalities, bodyparts, dates]:
-        #     for key in category.keys():
-        #         if category[key].isChecked():
-        #             checked_filters.append(key)
-
         checked_modalities = []
         for key in modalities.keys():
             if modalities[key].isChecked():
@@ -92,13 +100,12 @@ class Model():
         for key in dates.keys():
             if dates[key].isChecked():
                 checked_dates.append(key)
-        # checked_dates = self.get_checked_datatype(checked_dates, "exam_date")
 
         checked_filters = {"modality": checked_modalities, "bodypart": checked_bodyparts, "exam_date": checked_dates}
 
         self.current_filters = checked_filters
 
-    def get_checked_datatype(self, list, category):
+    def get_checked_datatype(self, list, category=None):
         if len(list) == 0:
             return tuple(self.filter_options[category])
         elif len(list) == 1:
@@ -107,9 +114,39 @@ class Model():
         else:
             return tuple(list)
 
+    def get_filtered_ids(self):
+        mod_bp_ids = self.get_mod_bp_ids()
+
+        if len(mod_bp_ids) == 0 or len(self.current_filters["exam_date"]) == 0:
+            filtered_IDs = mod_bp_ids
+            return filtered_IDs
+
+        else:
+            date_IDs = self.get_date_ids(mod_bp_ids)
+            filtered_IDs = date_IDs
+            return filtered_IDs
+
+
+    def get_mod_bp_ids(self):
+        mod_bp_ids = []
+        query_values = (self.current_patient_ID, self.current_filters["modality"], self.current_filters["bodypart"])
+        mod_bp_ids_tuple = self.db_connection.get_mod_bd_IDs(query_values)
+        for id in mod_bp_ids_tuple:
+            mod_bp_ids.append(id[0])
+        return mod_bp_ids
+
+    def get_date_ids(self, mod_bp_ids):
+        total_ids = []
+        for option in self.current_filters["exam_date"]:
+            date_query = self.date_filters[option]
+            query_values = (self.current_patient_ID, self.get_checked_datatype(mod_bp_ids), date_query)
+            date_IDs = self.db_connection.get_filtered_date_IDs(query_values)
+            total_ids = total_ids + date_IDs
+        return total_ids
+
     def get_reports_to_display(self, filtered_IDs=None):
         if filtered_IDs is None:
-            report_IDs = self.db_connection.get_report_IDs(self.current_patient_ID, self.current_filters)
+            report_IDs = self.db_connection.get_report_IDs(self.current_patient_ID)
             if report_IDs is None:
                 return None
         else:
