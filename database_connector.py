@@ -133,6 +133,17 @@ class DB_Connection:
         self.cursor.execute(query % (label, label, label, label))
         return self.cursor.fetchall()
 
+    def get_all_labels(self):
+        self.cursor.execute("SELECT Institution FROM labels")
+        labels = self.cursor.fetchall()
+        self.cursor.execute("SELECT Modality FROM labels")
+        labels = labels + self.cursor.fetchall()
+        self.cursor.execute("SELECT Bodypart FROM labels")
+        labels = labels + self.cursor.fetchall()
+        self.cursor.execute("SELECT Clinician FROM labels")
+        labels = labels + self.cursor.fetchall()
+        return labels
+
 
 
 # test_db = DB_Connection()
