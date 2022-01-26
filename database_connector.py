@@ -109,10 +109,21 @@ class DB_Connection:
         self.cursor.execute(query % report_ID)
         return self.cursor.fetchall()
 
-    def search_by_label(self, label):
-        query = "SELECT Report_ID FROM labels WHERE Institution='%s' OR Modality='%s' OR Bodypart='%s' OR Clinician='%s'"
-        self.cursor.execute(query % (label, label, label, label))
+    def search_by_label(self, label, specified_category=None):
+        if specified_category:
+            query = "SELECT Report_ID FROM labels WHERE " + specified_category + "=" + "'" + label + "'"
+            self.cursor.execute(query)
+        else:
+            query = "SELECT Report_ID FROM labels WHERE Institution='%s' OR Modality='%s' OR Bodypart='%s' OR Clinician='%s'"
+            self.cursor.execute(query % (label, label, label, label))
         return self.cursor.fetchall()
+
+    def search_with_super_variable_query(self, query_after_where):
+        query = "SELECT Report_ID FROM labels WHERE" + query_after_where
+        print("query: {}".format(query))
+        self.cursor.execute(query)
+        return self.cursor.fetchall()
+
 
     def get_all_labels(self):
         self.cursor.execute("SELECT Institution FROM labels")
