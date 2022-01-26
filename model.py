@@ -27,13 +27,14 @@ class Model():
         self.current_patient_ID = None
         self.current_filters = None
         self.current_columns = None
+        self.filter_options = None
+        self.date_filters = None
 
         self.set_current_patient_ID(22)
+        self.set_filter_options()
+        self.set_date_filters()
         self.current_display_data_with_IDs = None
 
-        self.filter_options = {"modalities": ["X-ray", "MRI", "CT", "Ultrasound"],
-                               "bodyparts": ["Head and neck", "Chest", "Abdomen", "Upper Limbs", "Lower Limbs", "Other"],
-                               "exam_date":["<6mos", "6mos-1yr", "1yr-5yrs", ">5yrs"]}
 
         self.short_form_dictionary = {"X-ray": ["x-ray", "xray"],
                                       "MRI": ["mr"],
@@ -45,17 +46,32 @@ class Model():
                                                       "patella", "acl", "tibia", "fibula", ],
                                       "Chest": ["heart", "cardiac", "lung", "pulmonary", "sternum", "rib", "ribs",
                                                 "diaphragm", "clavicle"],
-                                      "Head and neck": ["brain", "carotid", "frontal", "parietal", "temporal",
+                                      "Head and neck": ["head","brain", "carotid", "frontal", "parietal", "temporal",
                                                         "occipital", "sinus", "nose", "dental", "mandible", "occular",
-                                                        "eye", "mouth", "ear", "pituitary"],
+                                                        "eye", "mouth", "ear", "pituitary", "neck"],
                                       "Abdomen": ["liver", "stomach", "belly", "kidney", "gallbladder", "spleen",
                                                   "pancreas", "intestine", "colon", "appendix", "uterus", "ovaries",
                                                   "ovarian", "fetal", "pregnancy"]}
 
-        self.unimportant_words = ["and", "the", "to", "or", "a", "report", "transcript"]
+        self.unimportant_words = ["and", "the", "to", "or", "a", "report", "transcript", "at", "for"]
+        self.read_csv()
+
 
     def set_current_patient_ID(self, ID):
         self.current_patient_ID = ID
+
+    def set_filter_options(self):
+        self.filter_options = {"modalities": ["X-ray", "MRI", "CT", "Ultrasound"],
+                               "bodyparts": ["Head and neck", "Chest", "Abdomen", "Upper Limbs", "Lower Limbs",
+                                             "Other"],
+                               "exam_date": ["<6mos", "6mos-1yr", "1yr-5yrs", ">5yrs"]}
+
+    def set_date_filters(self):
+        self.date_filters = {"<6mos": "> date_sub(now(), interval 6 month)",
+                             "6mos-1yr": "between date_sub(now(), interval 1 year) "
+                                         "AND date_sub(now(), interval 6 month)",
+                             "1yr-5yrs": "between date_sub(now(), interval 5 year) AND date_sub(now(), interval 1 year)",
+                             ">5yrs": "< date_sub(now(), interval 5 year)"}
 
     def import_report(self, path):
         filename = path.split('/')[-1]
@@ -89,7 +105,6 @@ class Model():
         self.db_connection.add_labels(label_args)
 
     def set_filters(self, modalities, bodyparts, dates):
-
         checked_modalities = []
         for key in modalities.keys():
             if modalities[key].isChecked():
@@ -106,13 +121,12 @@ class Model():
         for key in dates.keys():
             if dates[key].isChecked():
                 checked_dates.append(key)
-        # checked_dates = self.get_checked_datatype(checked_dates, "exam_date")
 
         checked_filters = {"modality": checked_modalities, "bodypart": checked_bodyparts, "exam_date": checked_dates}
 
         self.current_filters = checked_filters
 
-    def get_checked_datatype(self, list, category):
+    def get_checked_datatype(self, list, category=None):
         if len(list) == 0:
             return tuple(self.filter_options[category])
         elif len(list) == 1:
@@ -121,9 +135,39 @@ class Model():
         else:
             return tuple(list)
 
+    def get_filtered_ids(self):
+        mod_bp_ids = self.get_mod_bp_ids()
+
+        if len(mod_bp_ids) == 0 or len(self.current_filters["exam_date"]) == 0:
+            filtered_IDs = mod_bp_ids
+            return filtered_IDs
+
+        else:
+            date_IDs = self.get_date_ids(mod_bp_ids)
+            filtered_IDs = date_IDs
+            return filtered_IDs
+
+
+    def get_mod_bp_ids(self):
+        mod_bp_ids = []
+        query_values = (self.current_patient_ID, self.current_filters["modality"], self.current_filters["bodypart"])
+        mod_bp_ids_tuple = self.db_connection.get_mod_bd_IDs(query_values)
+        for id in mod_bp_ids_tuple:
+            mod_bp_ids.append(id[0])
+        return mod_bp_ids
+
+    def get_date_ids(self, mod_bp_ids):
+        total_ids = []
+        for option in self.current_filters["exam_date"]:
+            date_query = self.date_filters[option]
+            query_values = (self.current_patient_ID, self.get_checked_datatype(mod_bp_ids), date_query)
+            date_IDs = self.db_connection.get_filtered_date_IDs(query_values)
+            total_ids = total_ids + date_IDs
+        return total_ids
+
     def get_reports_to_display(self, filtered_IDs=None):
         if filtered_IDs is None:
-            report_IDs = self.db_connection.get_report_IDs(self.current_patient_ID, self.current_filters)
+            report_IDs = self.db_connection.get_report_IDs(self.current_patient_ID)
             if report_IDs is None:
                 return None
         else:
@@ -171,10 +215,11 @@ class Model():
                               "Institution": ["Hospital", ]}
 
     def search_labels_by_partial_sf_query(self, partial_query):
+        labels_present = []
         if any(partial_query.lower() in map(str.lower, sf_list) for sf_list in self.short_form_dictionary.values()):
             labels_present = self.get_full_label_name(partial_query.lower())
-        else:
-            labels_present = []
+        if partial_query.lower() in map(str.lower, self.short_form_dictionary.keys()):
+            labels_present = labels_present + [partial_query]
         # get any institution labels:
         labels_present = labels_present + self.get_institution_labels(partial_query)
         return labels_present
@@ -243,7 +288,6 @@ class Model():
     def get_institution_labels(self, user_query):
 
         # assume user query exactly matches institution short form from list
-        self.read_csv()
         short_forms = self.all_institutions['Short forms']
         desired_institutions = []
         for i in range(len(short_forms)):
@@ -255,6 +299,6 @@ class Model():
 
     def read_csv(self):
         self.all_institutions = pd.read_csv('institution_list.csv')
-        print(self.all_institutions)
+       # print(self.all_institutions)
 
 
