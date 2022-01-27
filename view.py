@@ -215,14 +215,20 @@ class View(QMainWindow):
         item.setBackground(QBrush(QColor('white')))
 
         viewer = ReportViewer(filename)
-        viewer.show()
+        try:
+            viewer.show()
+        except:
+            viewer.show()
 
         dialog = QDialog()
         dialog.setWindowTitle(report_name)
         dialog_layout = QGridLayout()
         dialog.setLayout(dialog_layout)
         dialog_layout.addWidget(viewer)
-        dialog.exec()
+        try:
+            dialog.exec()
+        except:
+            dialog.exec()
 
     def display_image_report(self, filename, report_name):
         dialog = QDialog()

@@ -36,6 +36,27 @@ class Model():
         self.current_display_data_with_IDs = None
 
 
+        self.short_form_dictionary = {"X-ray": ["x-ray", "xray"],
+                                      "MRI": ["mr"],
+                                      "Ultrasound": ["doppler", "us", "sonogram"],
+                                      "CT": ["cat", "scan"],
+                                      "Upper Limbs": ["arm", "arms", "wrist", "hand", "elbow", "shoulder", "forearm"
+                                                      "humerus", "radius", "ulna"],
+                                      "Lower Limbs": ["leg", "legs","foot", "ankle","toe", "hip", "femur", "knee",
+                                                      "patella", "acl", "tibia", "fibula", ],
+                                      "Chest": ["heart", "cardiac", "lung", "pulmonary", "sternum", "rib", "ribs",
+                                                "diaphragm", "clavicle"],
+                                      "Head and neck": ["head","brain", "carotid", "frontal", "parietal", "temporal",
+                                                        "occipital", "sinus", "nose", "dental", "mandible", "occular",
+                                                        "eye", "mouth", "ear", "pituitary", "neck"],
+                                      "Abdomen": ["liver", "stomach", "belly", "kidney", "gallbladder", "spleen",
+                                                  "pancreas", "intestine", "colon", "appendix", "uterus", "ovaries",
+                                                  "ovarian", "fetal", "pregnancy"]}
+
+        self.unimportant_words = ["and", "the", "to", "or", "a", "report", "transcript", "at", "for"]
+        self.read_csv()
+
+
     def set_current_patient_ID(self, ID):
         self.current_patient_ID = ID
 
@@ -199,40 +220,194 @@ class Model():
                               "Institution": ["Hospital", ]}
 
 
-    def begin_search(self, user_query):
+# ----------- BELOW THIS POINT, ALL CODE IS FOR SEARCH BAR IMPLEMENTATION -----------
+
+
+    def search_labels_by_partial_sf_query(self, partial_query):
+        labels_present = []
+        if any(partial_query.lower() in map(str.lower, sf_list) for sf_list in self.short_form_dictionary.values()):
+            labels_present = self.get_full_label_name(partial_query.lower())
+        if partial_query.lower() in map(str.lower, self.short_form_dictionary.keys()):
+            labels_present = labels_present + [partial_query]
+        # get any institution labels:
+        labels_present = labels_present + self.get_institution_labels(partial_query)
+        return labels_present
+
+    def get_full_label_name(self, value):
+        full_names = []  # could maybe be more than one answer (ideally just 1 though)
+        for label in self.short_form_dictionary.keys():
+            if value in self.short_form_dictionary[label]:
+                full_names.append(label)
+        return full_names
+
+    def apply_search_labels(self, labels):
+        category_set = list(set([label.type for label in labels]))
+        label_values = [label.value for label in labels]
+
+        print("category set: {}".format(category_set))
+        print("label values: {}".format(label_values))
+
+        active_type_count = len(category_set)
+        unique_label_values = len(label_values)  # we already know that all values in label_values are unique because we created it that way
+
+        if active_type_count == 1:
+            # apply all labels inclusively since they're all the same category of labels
+            # example: ['Upper Limbs', 'Lower Limbs'] should show all reports tagged for either upper or lower limbs
+            ids = []
+            for label in labels:
+                ids += self.db_connection.search_by_label(label.value, label.type)
+
+        elif active_type_count == unique_label_values:
+            # one label of each type -- this is "easy", just make all labels required
+            # example: ['CT', 'Head and Neck'] or ['MRI', 'Grand River Hospital', 'Lower Limbs']
+            # only return reports that match ALL of the labels
+
+            query_variable_string = ""
+            for i in range(len(labels)):
+                label_obj = labels[i]
+                if i < len(labels)-1:  # if we're not on the last item of the list
+                    query_variable_string += " " + label_obj.type + "=" + "'" + label_obj.value + "' AND"
+                else: # we're on the last item, so don't put an "AND" at the end
+                    query_variable_string += " " + label_obj.type + "=" + "'" + label_obj.value + "'"
+
+            ids = self.db_connection.search_with_super_variable_query(query_variable_string)
+
+
+        elif unique_label_values > active_type_count:
+            # there's more than one label in at least one category, ex. ['Upper Limbs', 'Lower Limbs', 'X-ray']
+            # should return any xray of either the upper or lower limbs in the above example
+            query_variable_string = ""
+            # create "OR" sections first, i.e. deal with labels of the same category
+            labels_by_category_dict = {}
+            for category in category_set:
+                labels_by_category_dict[category] = []
+            for label in labels:
+                labels_by_category_dict[label.type].append(label.value)
+            print(labels_by_category_dict)
+
+            # we should now have a dict (for the above example) that is:
+            # {"bodypart": ['Upper Limbs', 'Lower Limbs'], "modality": ['X-ray']
+            sub_queries = []
+            for category in labels_by_category_dict.keys():
+                sub_query = " ("
+                for i in range(len(labels_by_category_dict[category])):
+                    value = labels_by_category_dict[category][i]
+                    if i < len(labels_by_category_dict[category])-1:
+                        sub_query += " " + category + "=" + "'" + value + "' OR"
+                    else:
+                        sub_query += " " + category + "=" + "'" + value + "')"
+                sub_queries.append(sub_query)
+
+            total_query_var = ""
+            for i in range(len(sub_queries)):
+                if i < len(sub_queries)-1:
+                    total_query_var += sub_queries[i] + " AND"
+                else:
+                    total_query_var += sub_queries[i]
+
+            ids = self.db_connection.search_with_super_variable_query(total_query_var)
+
+        else:
+            print("No labels found - reached else statement in apply_search_labels()")
+            ids = []
+
+        return ids
+
+    def search(self, user_query):
         # do some logic to break it into pieces
         # step 1 - check for institutions / clinicians
         # step 2 - check for other labels
         # step 3 - look through OCR text
 
-        return self.get_institution_ids(user_query)
+        all_current_label_options = self.get_untupled_label_list(self.db_connection.get_all_labels())
+        labels_searched_for = self.label_search_main(user_query, all_current_label_options)
+        print("labels searched for: {}".format(labels_searched_for))
+        labels_with_types = self.assign_label_type(labels_searched_for)
+        ids_from_labels = self.apply_search_labels(labels_with_types)
+        print("ids from labels: {}".format(ids_from_labels))
+        return ids_from_labels
+       # ids = self.apply_search_labels(desired_institutions)
 
-    def apply_search_labels(self, labels):
-        all_ids = []
+
+    def label_search_main(self, user_query, label_options):
+        labels_searched_for = []
+        if self.is_exact_label_match(user_query, label_options):  # check for exact matches to search criteria
+            labels_searched_for.append(user_query)
+        else: # no exact match for label, but there might be a match for a short form of a label
+            labels_searched_for = labels_searched_for + self.identify_short_form_search_labels(user_query)
+
+        return list(set(labels_searched_for))  # make sure there are no duplicate labels by returning "set()"
+
+    def assign_label_type(self, labels):
+        # label_types = {"mod": [], "body": [], "inst": [], "clin": []}
+        # for label in labels:
+        #     if label in self.filter_options["modalities"]:
+        #         label_types["mod"].append(label)
+        #     elif label in self.filter_options["bodyparts"]:
+        #         label_types["body"].append(label)
+        #     elif label in self.all_institutions["Names"]:
+        #         label_types["inst"].append(label)
+        #     else:
+        #         label_types["clin"].append(label)
+
+        label_types = []
         for label in labels:
-            ids = self.db_connection.search_by_label(label)
-            all_ids = all_ids + ids
-        print(all_ids)
-        return all_ids
+            if label.lower() in map(str.lower, self.filter_options["modalities"]):
+                l = Label("modality", label)
+                label_types.append(l)
+            elif label.lower() in map(str.lower, self.filter_options["bodyparts"]):
+                l = Label("bodypart", label)
+                label_types.append(l)
+            elif label.lower() in map(str.lower, self.all_institutions["Names"]):
+                l = Label("institution", label)
+                label_types.append(l)
+            else:
+                l = Label("clinician", label)
+                label_types.append(l)
+
+        return label_types
 
 
-    def get_institution_ids(self, user_query):
+    def identify_short_form_search_labels(self, user_query):
+        all_present_sf_labels = []
+        if " " in user_query: # check each "word" of the search individually
+            partial_queries = user_query.split(' ')
+            for query in partial_queries:
+                if query not in self.unimportant_words:
+                    all_present_sf_labels = all_present_sf_labels + self.search_labels_by_partial_sf_query(query)
+        else: # check whole label if there's only one "word"
+            all_present_sf_labels = all_present_sf_labels + self.search_labels_by_partial_sf_query(user_query)
+
+        return all_present_sf_labels
+
+    def is_exact_label_match(self, query, labels):
+        if query.lower() in map(str.lower, labels):
+            return True
+        else:
+            return False
+
+    def get_untupled_label_list(self, tupled_list):
+        new_list = []
+        for tuple in tupled_list:
+            new_list.append(tuple[0])
+        new_list = list(dict.fromkeys(new_list)) # remove repeated items
+        return new_list
+
+    def get_institution_labels(self, user_query):
 
         # assume user query exactly matches institution short form from list
-        self.read_csv()
         short_forms = self.all_institutions['Short forms']
         desired_institutions = []
         for i in range(len(short_forms)):
             if user_query == short_forms[i]:
                 inst = self.all_institutions['Names'][i]
                 desired_institutions.append(inst)
-        print(desired_institutions)
-        ids = self.apply_search_labels(desired_institutions)
-        return ids
+
+        return desired_institutions
 
     def read_csv(self):
         self.all_institutions = pd.read_csv('institution_list.csv')
-        print(self.all_institutions)
+       # print(self.all_institutions)
 
     def clear_filters_layout(self, filters_layout):
         for i in reversed(range(filters_layout.count())):
@@ -254,3 +429,8 @@ class Model():
             for key in filter_checkboxes[i].keys():
                 if key == filter_to_remove.text():
                     filter_checkboxes[i][key].setChecked(False)
+
+class Label:
+    def __init__(self, type, value):
+        self.type = type
+        self.value = value

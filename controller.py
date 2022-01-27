@@ -35,7 +35,7 @@ class Controller:
 
     def begin_search(self):
         user_query = self.view.search_bar.text()
-        report_IDs = self.model.begin_search(user_query)
+        report_IDs = self.model.search(user_query)
         self.get_report_info_to_display(report_IDs)
         self.display_report_info()
 
