@@ -22,6 +22,9 @@ class Controller:
         self.view.dialog_button.clicked.connect(self.apply_filters)
         self.view.report_table.cellPressed.connect(self.view_report)
         self.view.go_button.clicked.connect(self.begin_search)
+        self.view.clear_filters_button.clicked.connect(self.clear_filters)
+        self.view.dialog_clear_filters_button.clicked.connect(self.clear_dialog_filters)
+        self.view.remove_filter_buttons.buttonClicked.connect(self.remove_one_filter)
 
     def view_report(self, row, col):
         filename, isPDF, name = self.model.view_report(row, col)
@@ -56,12 +59,33 @@ class Controller:
         self.view.show_dialog()
 
     def apply_filters(self):
-        self.model.set_filters(self.view.mod_options, self.view.bodypart_options, self.view.date_options)
+        active_filters = self.model.set_filters(self.view.mod_options, self.view.bodypart_options, self.view.date_options)
+        self.populate_filter_layout(active_filters)
+        self.get_filtered_reports()
+        self.view.close_dialog()
+
+    def populate_filter_layout(self, active_filters):
+        self.model.clear_filters_layout(self.view.filters_layout)
+        if len(active_filters) != 0:
+            self.view.populate_filters_layout(active_filters)
+
+    def get_filtered_reports(self):
         report_IDs = self.model.get_filtered_ids()
         self.get_report_info_to_display(report_IDs)
         self.display_report_info()
-        self.view.close_dialog()
 
+    def clear_filters(self):
+        self.model.clear_filters_layout(self.view.filters_layout)
+        self.model.reset_current_filters()
+        self.model.reset_filter_checkboxes([self.view.mod_options, self.view.bodypart_options, self.view.date_options])
+        self.initial_reports_display()
+
+    def clear_dialog_filters(self):
+        self.model.reset_filter_checkboxes([self.view.mod_options, self.view.bodypart_options, self.view.date_options])
+
+    def remove_one_filter(self, filter_to_remove):
+        self.model.uncheck_filter(filter_to_remove, [self.view.mod_options, self.view.bodypart_options, self.view.date_options])
+        self.apply_filters()
 
     def initial_reports_display(self):
         self.get_report_info_to_display()

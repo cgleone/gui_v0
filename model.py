@@ -85,25 +85,30 @@ class Model():
 
     def set_filters(self, modalities, bodyparts, dates):
         checked_modalities = []
+        active_filters=[]
         for key in modalities.keys():
             if modalities[key].isChecked():
                 checked_modalities.append(key)
+        active_filters = active_filters + checked_modalities
         checked_modalities = self.get_checked_datatype(checked_modalities, "modalities")
 
         checked_bodyparts = []
         for key in bodyparts.keys():
             if bodyparts[key].isChecked():
                 checked_bodyparts.append(key)
+        active_filters = active_filters + checked_bodyparts
         checked_bodyparts = self.get_checked_datatype(checked_bodyparts, "bodyparts")
 
         checked_dates = []
         for key in dates.keys():
             if dates[key].isChecked():
                 checked_dates.append(key)
+        active_filters = active_filters + checked_dates
 
         checked_filters = {"modality": checked_modalities, "bodypart": checked_bodyparts, "exam_date": checked_dates}
 
         self.current_filters = checked_filters
+        return active_filters
 
     def get_checked_datatype(self, list, category=None):
         if len(list) == 0:
@@ -229,4 +234,23 @@ class Model():
         self.all_institutions = pd.read_csv('institution_list.csv')
         print(self.all_institutions)
 
+    def clear_filters_layout(self, filters_layout):
+        for i in reversed(range(filters_layout.count())):
+            widget_to_remove = filters_layout.itemAt(i).widget()
+            filters_layout.removeWidget(widget_to_remove)
+            widget_to_remove.setParent(None)
 
+    def reset_current_filters(self):
+        self.current_filters = None
+
+    def reset_filter_checkboxes(self, filter_checkboxes):
+        for i in range(len(filter_checkboxes)):
+            for key in filter_checkboxes[i].keys():
+                if filter_checkboxes[i][key].isChecked():
+                    filter_checkboxes[i][key].setChecked(False)
+
+    def uncheck_filter(self, filter_to_remove, filter_checkboxes):
+        for i in range(len(filter_checkboxes)):
+            for key in filter_checkboxes[i].keys():
+                if key == filter_to_remove.text():
+                    filter_checkboxes[i][key].setChecked(False)
