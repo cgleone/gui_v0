@@ -24,8 +24,36 @@ results = model.predict(input_data) # Make predictions
 
 ## MinimalModel
 This is a simple model that searches for specific pieces of text as tags within the report.
+```
+import pickle
+from models.minimal_model import MinimalModel
 
+# Load data
+with open('models/minimal_model_data/parameters.pkl', 'rb) as f:
+    parameters = pickle.load(f)
+
+# Setup pre-trained model
+model = MinimalModel()
+model.set_parameters(parameters)
+
+# Predict on some input data
+input_data = {
+    0: 'text0',
+    1: 'text1'
+}
+model.predict(input_data)
+```
 # API and conventions
+
+## Model Inputs
+Model inputs are a dictionary of strings. The keys are IDs for the report and the values are the texts as a string.
+```
+input_data = {
+    0: 'text0',
+    1: 'text1'
+}
+model.predict(input_data)
+```
 
 ## Results and Training Labels
 
