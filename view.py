@@ -18,7 +18,7 @@ from PyQt5.QtCore import Qt, QStringListModel, QTextStream, QObject, pyqtSignal,
     QEvent, QModelIndex
 
 from PyQt5.QtWidgets import QGridLayout, QLabel, QToolBar, QStatusBar, QDialog, QTableWidgetItem, QHeaderView, \
-    QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox
+    QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox, QButtonGroup
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -34,6 +34,7 @@ class View(QMainWindow):
         self._createMainWidget()
         self.create_buttons()
         self.create_user_inputs()
+        self.create_dialog_for_later()
 
         self._createLayouts()
 
@@ -51,6 +52,7 @@ class View(QMainWindow):
         self.table_grid = QGridLayout()
         self.title_layout = QHBoxLayout()
         self.search_layout = QHBoxLayout()
+        self.filters_layout = QHBoxLayout()
 
         self.populate_vertical_main()
         self.create_table_grid()
@@ -60,6 +62,7 @@ class View(QMainWindow):
     def populate_vertical_main(self):
         self.vertical_main.addLayout(self.title_layout)
         self.vertical_main.addLayout(self.search_layout)
+        self.vertical_main.addLayout(self.filters_layout)
         self.vertical_main.addLayout(self.table_grid)
 
     def set_table_row_count(self, row_count):
@@ -70,10 +73,17 @@ class View(QMainWindow):
         self.report_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.report_table.setMouseTracking(True)
         self.report_table.setColumnCount(5)
+        header_font = QFont()
+        header_font.setBold(True)
+        header_font.setPointSize(12)
 
         self.report_table.setHorizontalHeaderLabels(['Date Added', 'File Name', 'Imaging Modality', 'Body Part', 'Notes'])
         self.report_table.horizontalHeader().setStretchLastSection(True)
+       # self.report_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.report_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.report_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+
+        self.report_table.horizontalHeader().setFont(header_font)
         self.report_table.verticalHeader().setVisible(False)
         self.table_grid.addWidget(self.report_table)
 
@@ -130,6 +140,9 @@ class View(QMainWindow):
         self.go_button = QPushButton("Go")
         self.dialog_button = QPushButton("Apply Filters")
         self.logout_button = QPushButton("Logout")
+        self.clear_filters_button = QPushButton("Clear Active Filters")
+        self.dialog_clear_filters_button = QPushButton("Clear Filters")
+        self.remove_filter_buttons = QButtonGroup()
 
     def create_user_inputs(self):
         self.search_bar = QLineEdit()
@@ -144,12 +157,14 @@ class View(QMainWindow):
         #self.explorer = QFileDialog.getOpenFileName(self, 'Open File', '/Users/cathleenl/Documents/data_stuff')[0]
         self.explorer = QFileDialog.getOpenFileName(self, 'Open File', '/Users\Wong\PycharmProjects\ocr_testing\pics')[0]
 
-    def show_dialog(self):
+    def create_dialog_for_later(self):
         self.dialog = QDialog()
         self.dialog.setWindowTitle("Select Filters")
         self.dialog_layout = QGridLayout()
         self.populate_dialog()
         self.dialog.setLayout(self.dialog_layout)
+
+    def show_dialog(self):
         self.dialog.exec()
 
 
@@ -157,11 +172,11 @@ class View(QMainWindow):
         self.create_filter_options()
         self.dialog_layout.addWidget(QLabel("Imaging Modalities: "), 0, 0)
         self.dialog_layout.addWidget(QLabel("Body Parts: "), 0, 1)
-        self.dialog_layout.addWidget(QLabel("Facilities/Institutions: "), 0, 2)
+        self.dialog_layout.addWidget(QLabel("Date of Exam: "), 0, 2)
 
         max_rows = 1
         column = 0
-        for category in [self.mod_options, self.bodypart_options, self.hospital_options]:
+        for category in [self.mod_options, self.bodypart_options, self.date_options]:
             row = 1
             for value in category.values():
                 self.dialog_layout.addWidget(value, row, column)
@@ -169,6 +184,7 @@ class View(QMainWindow):
                 if row > max_rows: max_rows = row
             column = column + 1
 
+        self.dialog_layout.addWidget(self.dialog_clear_filters_button, max_rows+1, 1)
         self.dialog_layout.addWidget(self.dialog_button, max_rows+1, 2)
 
     def close_dialog(self):
@@ -179,25 +195,40 @@ class View(QMainWindow):
         # modalities
         self.mod_options = {"X-ray": QCheckBox("X-ray"), "MRI": QCheckBox("MRI"), "CT": QCheckBox("CT"),
                             "Ultrasound": QCheckBox("Ultrasound")}
-        self.hospital_options = {"St. Mary's Hospital": QCheckBox("St. Mary's Hospital"),
-                                 "Grand River Hospital": QCheckBox("Grand River Hospital")}
+        self.date_options = {"<6mos": QCheckBox("< 6mos"),
+                                 "6mos-1yr": QCheckBox("6mos - 1yr"), "1yr-5yrs": QCheckBox("1yr - 5yrs"),
+                             ">5yrs": QCheckBox("> 5 yrs")}
         self.bodypart_options = {"Head and Neck": QCheckBox("Head and Neck"), "Chest": QCheckBox("Chest"),
                                  "Abdomen": QCheckBox("Abdomen"), "Upper Limbs": QCheckBox("Upper Limbs"),
                                  "Lower Limbs": QCheckBox("Lower Limbs"), "Other": QCheckBox("Other")}
+
+    def populate_filters_layout(self, active_filters):
+        self.filters_layout.addWidget(QLabel("Active Filters: "))
+        for i in range(len(active_filters)):
+            button = QPushButton(active_filters[i])
+            self.remove_filter_buttons.addButton(button, i)
+            self.filters_layout.addWidget(button)
+        self.filters_layout.addWidget(self.clear_filters_button)
 
     def display_pdf(self, filename, report_name, row, col):
         item = self.report_table.item(row, col)
         item.setBackground(QBrush(QColor('white')))
 
         viewer = ReportViewer(filename)
-        viewer.show()
+        try:
+            viewer.show()
+        except:
+            viewer.show()
 
         dialog = QDialog()
         dialog.setWindowTitle(report_name)
         dialog_layout = QGridLayout()
         dialog.setLayout(dialog_layout)
         dialog_layout.addWidget(viewer)
-        dialog.exec()
+        try:
+            dialog.exec()
+        except:
+            dialog.exec()
 
     def display_image_report(self, filename, report_name):
         dialog = QDialog()
@@ -240,7 +271,6 @@ class PDFReport(PyQt5.QtWebEngineWidgets.QWebEngineView):
     def load_pdf(self, filename):
         path = os.path.join(CURRENT_DIR, filename)
         url = PyQt5.QtCore.QUrl.fromLocalFile(path).toString()
-        print(url)
         self.settings().setAttribute(
             PyQt5.QtWebEngineWidgets.QWebEngineSettings.PluginsEnabled, True)
         self.settings().setAttribute(
