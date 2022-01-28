@@ -25,6 +25,7 @@ class Controller:
         self.view.dialog_button.clicked.connect(self.apply_filters)
         self.view.report_table.cellPressed.connect(self.view_report)
         self.view.go_button.clicked.connect(self.begin_search)
+        self.view.search_bar.returnPressed.connect(self.begin_search)
         self.view.clear_filters_button.clicked.connect(self.clear_filters)
         self.view.dialog_clear_filters_button.clicked.connect(self.clear_dialog_filters)
         self.view.remove_filter_buttons.buttonClicked.connect(self.remove_one_filter)

@@ -14,7 +14,7 @@ class DB_Connection:
         self.db = mysql.connect(
             host="localhost",
             user="root",
-            passwd="#Darren89candiesEW!",
+            passwd="FYDP2022",
             database="reportdata")
 
         self.cursor = self.db.cursor()
@@ -141,6 +141,9 @@ class DB_Connection:
         labels = labels + self.cursor.fetchall()
         return labels
 
+    def get_all_clinicians(self):
+        self.cursor.execute("SELECT Clinician FROM labels")
+        return self.cursor.fetchall()
 
 
 # test_db = DB_Connection()

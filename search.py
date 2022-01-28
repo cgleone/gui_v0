@@ -14,9 +14,14 @@ import pandas as pd
 # class SearchQuery(SearchBar):
 
 
-def read_csv():
-    all_institutions = pd.read_csv('institution_list.csv')
-    print(all_institutions)
+
+from models.minimal_model import MinimalModel
 
 
-read_csv()
+nlp = MinimalModel()
+file = open("report_texts/MinimalModel0_62.txt", 'r')
+text = file.read()
+data = {0: text}
+file.close()
+idk_a_result_maybe = nlp.predict(data)
+print(idk_a_result_maybe)

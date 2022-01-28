@@ -5,20 +5,11 @@ from database_connector import DB_Connection
 from temp_nlp import generate_random_tags
 import pandas as pd
 from PyQt5.QtCore import Qt
+import datetime
 
-# temp patient id
+
 patient_id = 22
-#
-# list_of_files = []
-# class File():
-#     def __init__(self):
-#
-#
-#         self.file_name
-#         self.OCR_output
-#         self.tags = []
-#         list_of_files.append(self)
-#
+
 
 class Model():
 
@@ -57,11 +48,24 @@ class Model():
                                                         "eye", "mouth", "ear", "pituitary", "neck"],
                                       "Abdomen": ["liver", "stomach", "belly", "kidney", "gallbladder", "spleen",
                                                   "pancreas", "intestine", "colon", "appendix", "uterus", "ovaries",
-                                                  "ovarian", "fetal", "pregnancy"]}
+                                                  "ovarian", "fetal", "pregnancy", "pelvic", "pelvis"]}
 
         self.unimportant_words = ["and", "the", "to", "or", "a", "report", "transcript", "at", "for"]
+
+        self.date_terms = {"01": ["january", "jan"], "02": ["february", "feb"], "03": ["march", "mar"],
+                           "04": ["april","apr"], "05": ["may"], "06": ["june", "jun"], "07": ["july", "jul"],
+                           "08": ["august", "aug"], "09": ["september","sept"], "10": ["october", "oct"],
+                           "11": ["november", "nov"], "12": ["december", "dec"]}
+
+
+        self.clinicians_in_db = self.update_clinician_list()
         self.read_csv()
 
+    def update_clinician_list(self):
+        clinicians = self.db_connection.get_all_clinicians()
+        clin_list = list(set(self.get_untupled_label_list(clinicians)))
+        print(clin_list)
+        return clin_list
 
     def set_current_patient_ID(self, ID):
         self.current_patient_ID = ID
@@ -116,6 +120,7 @@ class Model():
         file.write(result)
         file.close()
         self.db_connection.add_report(patient_id, id, report_name.split('.')[0], file_path, text_path)
+        self.update_clinician_list()
 
     def call_nlp(self, report_id):
         labels = generate_random_tags()
@@ -302,17 +307,17 @@ class Model():
         print("category set: {}".format(category_set))
         print("label values: {}".format(label_values))
 
-        active_type_count = len(category_set)
+        category_count = len(category_set)
         unique_label_values = len(label_values)  # we already know that all values in label_values are unique because we created it that way
 
-        if active_type_count == 1:
+        if category_count == 1:
             # apply all labels inclusively since they're all the same category of labels
             # example: ['Upper Limbs', 'Lower Limbs'] should show all reports tagged for either upper or lower limbs
             ids = []
             for label in labels:
                 ids += self.db_connection.search_by_label(label.value, label.type)
 
-        elif active_type_count == unique_label_values:
+        elif category_count == unique_label_values:
             # one label of each type -- this is "easy", just make all labels required
             # example: ['CT', 'Head and Neck'] or ['MRI', 'Grand River Hospital', 'Lower Limbs']
             # only return reports that match ALL of the labels
@@ -328,7 +333,7 @@ class Model():
             ids = self.db_connection.search_with_super_variable_query(query_variable_string)
 
 
-        elif unique_label_values > active_type_count:
+        elif unique_label_values > category_count:
             # there's more than one label in at least one category, ex. ['Upper Limbs', 'Lower Limbs', 'X-ray']
             # should return any xray of either the upper or lower limbs in the above example
             query_variable_string = ""
@@ -369,18 +374,25 @@ class Model():
         return ids
 
     def search(self, user_query):
-        # do some logic to break it into pieces
-        # step 1 - check for institutions / clinicians
-        # step 2 - check for other labels
-        # step 3 - look through OCR text
 
         all_current_label_options = self.get_untupled_label_list(self.db_connection.get_all_labels())
-        labels_searched_for = self.label_search_main(user_query, all_current_label_options)
-        print("labels searched for: {}".format(labels_searched_for))
-        labels_with_types = self.assign_label_type(labels_searched_for)
-        ids_from_labels = self.apply_search_labels(labels_with_types)
-        print("ids from labels: {}".format(ids_from_labels))
-        return ids_from_labels
+        labels_searched_for, date_in_search = self.label_search_main(user_query, all_current_label_options)
+        if len(labels_searched_for) == 0 and date_in_search == [[], []]:
+            return []
+        elif len(labels_searched_for) > 0:
+            print("labels searched for: {}".format(labels_searched_for))
+            labels_with_types = self.assign_label_type(labels_searched_for)
+            ids_from_labels = self.apply_search_labels(labels_with_types)
+            print("ids from labels: {}".format(ids_from_labels))
+            if date_in_search != [[], []]:
+                final_ids = self.search_by_date(ids_from_labels, date_in_search[0], date_in_search[1])
+            else:
+                final_ids = ids_from_labels
+            return final_ids
+        else:
+            all_ids = self.db_connection.get_report_IDs(self.current_patient_ID)
+            final_ids = self.search_by_date(all_ids, date_in_search[0], date_in_search[1])
+            return final_ids
        # ids = self.apply_search_labels(desired_institutions)
 
 
@@ -388,52 +400,83 @@ class Model():
         labels_searched_for = []
         if self.is_exact_label_match(user_query, label_options):  # check for exact matches to search criteria
             labels_searched_for.append(user_query)
+            date_in_search = [[], []]
         else: # no exact match for label, but there might be a match for a short form of a label
-            labels_searched_for = labels_searched_for + self.identify_short_form_search_labels(user_query)
+            label_info = self.identify_short_form_search_labels(user_query)
+            date_in_search = label_info[1]
+            labels_searched_for = labels_searched_for + label_info[0]
 
-        return list(set(labels_searched_for))  # make sure there are no duplicate labels by returning "set()"
+
+        lower_case_label_list = [label.lower() for label in labels_searched_for]
+
+        return list(set(lower_case_label_list)), date_in_search   # make sure there are no duplicate labels by returning "set()"
 
     def assign_label_type(self, labels):
-        # label_types = {"mod": [], "body": [], "inst": [], "clin": []}
-        # for label in labels:
-        #     if label in self.filter_options["modalities"]:
-        #         label_types["mod"].append(label)
-        #     elif label in self.filter_options["bodyparts"]:
-        #         label_types["body"].append(label)
-        #     elif label in self.all_institutions["Names"]:
-        #         label_types["inst"].append(label)
-        #     else:
-        #         label_types["clin"].append(label)
 
         label_types = []
         for label in labels:
-            if label.lower() in map(str.lower, self.filter_options["modalities"]):
+            if label in map(str.lower, self.filter_options["modalities"]):
                 l = Label("modality", label)
                 label_types.append(l)
-            elif label.lower() in map(str.lower, self.filter_options["bodyparts"]):
+            elif label in map(str.lower, self.filter_options["bodyparts"]):
                 l = Label("bodypart", label)
                 label_types.append(l)
-            elif label.lower() in map(str.lower, self.all_institutions["Names"]):
+            elif label in map(str.lower, self.all_institutions["Names"]):
                 l = Label("institution", label)
                 label_types.append(l)
-            else:
+            elif label in map(str.lower, self.clinicians_in_db):
                 l = Label("clinician", label)
                 label_types.append(l)
 
         return label_types
 
-
     def identify_short_form_search_labels(self, user_query):
         all_present_sf_labels = []
+        exact_match_segments, user_query = self.get_exact_match_segments(user_query)
+        if user_query.isspace():
+            return exact_match_segments
+
+        months = []
+        years = []
+
+        date_in_search = [[], []]
         if " " in user_query: # check each "word" of the search individually
             partial_queries = user_query.split(' ')
             for query in partial_queries:
                 if query not in self.unimportant_words:
                     all_present_sf_labels = all_present_sf_labels + self.search_labels_by_partial_sf_query(query)
+                    months, years = self.get_dates_in_query(query, months, years)
+                    if len(months) or len(years):
+                        date_in_search = [months, years]
         else: # check whole label if there's only one "word"
             all_present_sf_labels = all_present_sf_labels + self.search_labels_by_partial_sf_query(user_query)
+            months, years = self.get_dates_in_query(user_query, months, years)
+            if len(months) or len(years):
+                date_in_search = [months, years]
 
-        return all_present_sf_labels
+        all_present_sf_labels = all_present_sf_labels + exact_match_segments
+
+        return all_present_sf_labels, date_in_search
+
+    def get_dates_in_query(self, query, months, years):
+        month = self.month_in_query(query)
+        year = self.year_in_query(query)
+        if month:
+            months.append(month)
+        if year:
+            years.append(year)
+
+        return months, years
+
+    def get_exact_match_segments(self, query):
+        exact_match_segments = []
+        for label_list in [self.short_form_dictionary.keys(), self.all_institutions['Names'], self.clinicians_in_db]:
+            for label in label_list:
+                if " " in label:
+                    if label.lower() in query.lower():
+                        exact_match_segments.append(label)
+                        query = query.lower().replace(label.lower(), '')  # replace the exact match with nothingness (removing the match from the query - tigger)
+        return [exact_match_segments, query]
 
     def is_exact_label_match(self, query, labels):
         if query.lower() in map(str.lower, labels):
@@ -454,11 +497,54 @@ class Model():
         short_forms = self.all_institutions['Short forms']
         desired_institutions = []
         for i in range(len(short_forms)):
-            if user_query == short_forms[i]:
+            test = short_forms[i]
+            blah = user_query.lower()
+            print(test)
+            bluh = test.lower()
+            if user_query.lower() == test.lower():
                 inst = self.all_institutions['Names'][i]
                 desired_institutions.append(inst)
 
         return desired_institutions
+
+    def month_in_query(self, query):
+        for month in self.date_terms.values():
+            for month_term in month:
+                if month_term == query.lower():
+                    return month_term
+
+        return None
+
+    def year_in_query(self, query):
+        now = datetime.datetime.now()
+        if query.isdigit():
+            if int(query) <= int(now.year) and int(query) >= 1920:
+                return query
+        return None
+
+    def search_by_date(self, ids, months, years):
+        if months == [] and years == []:
+            return []
+        new_ids = []
+        month_codes = []
+        for month in months:
+            month_codes.append(self.get_month_code(month))
+
+        for report_id in ids:
+            report_date = self.db_connection.get_report_date(report_id)[0][0]
+            if (report_date.split('-')[1] in month_codes or len(month_codes) == 0)\
+                    and (report_date[0:4] in years or len(years) == 0):
+                new_ids.append(report_id)
+
+        return new_ids
+
+    def get_month_code(self, month):
+        month_code = None
+        for month_option in self.date_terms.keys():
+            if month.lower() in self.date_terms[month_option]:
+                month_code = month_option
+        return month_code
+
 
     def read_csv(self):
         self.all_institutions = pd.read_csv('institution_list.csv')
