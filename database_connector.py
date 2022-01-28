@@ -23,11 +23,11 @@ class DB_Connection:
     def add_patient(self, info):
         return
 
-    def add_report(self, patient, report_id, name, og_path, txt_path):
+    def add_report(self, patient, report_id, name, og_path, txt_path, notes):
 
        # report_id = self.generate_report_id()
-        query = "INSERT INTO reports VALUES (%s, %s, %s, %s, %s)"
-        data = (patient, report_id, name, og_path, txt_path)
+        query = "INSERT INTO reports VALUES (%s, %s, %s, %s, %s, %s)"
+        data = (patient, report_id, name, og_path, txt_path, notes)
         self.cursor.execute(query, data)
         self.db.commit()
        # return report_id
@@ -75,7 +75,9 @@ class DB_Connection:
     def get_report_date(self, report_ID):
         query = "SELECT Exam_Date FROM labels WHERE Report_ID='%s'"
         self.cursor.execute(query % report_ID)
+        print(report_ID)
         datetime = self.cursor.fetchone()[-1]
+        print(datetime)
         date_string = datetime.strftime("%Y-%m-%d")
         return [(date_string,),]
 
@@ -101,6 +103,11 @@ class DB_Connection:
 
     def get_report_path(self, report_ID):
         query = "SELECT Report_file FROM reports WHERE Report_ID='%s'"
+        self.cursor.execute(query % report_ID)
+        return self.cursor.fetchall()
+
+    def get_text_path(self, report_ID):
+        query = "SELECT Report_text FROM reports WHERE Report_ID='%s'"
         self.cursor.execute(query % report_ID)
         return self.cursor.fetchall()
 
