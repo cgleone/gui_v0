@@ -18,7 +18,7 @@ from PyQt5.QtCore import Qt, QStringListModel, QTextStream, QObject, pyqtSignal,
     QEvent, QModelIndex
 
 from PyQt5.QtWidgets import QGridLayout, QLabel, QToolBar, QStatusBar, QDialog, QTableWidgetItem, QHeaderView, \
-    QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox
+    QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox, QButtonGroup
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -52,6 +52,7 @@ class View(QMainWindow):
         self.table_grid = QGridLayout()
         self.title_layout = QHBoxLayout()
         self.search_layout = QHBoxLayout()
+        self.filters_layout = QHBoxLayout()
 
         self.populate_vertical_main()
         self.create_table_grid()
@@ -61,6 +62,7 @@ class View(QMainWindow):
     def populate_vertical_main(self):
         self.vertical_main.addLayout(self.title_layout)
         self.vertical_main.addLayout(self.search_layout)
+        self.vertical_main.addLayout(self.filters_layout)
         self.vertical_main.addLayout(self.table_grid)
 
     def set_table_row_count(self, row_count):
@@ -138,6 +140,9 @@ class View(QMainWindow):
         self.go_button = QPushButton("Go")
         self.dialog_button = QPushButton("Apply Filters")
         self.logout_button = QPushButton("Logout")
+        self.clear_filters_button = QPushButton("Clear Active Filters")
+        self.dialog_clear_filters_button = QPushButton("Clear Filters")
+        self.remove_filter_buttons = QButtonGroup()
 
     def create_user_inputs(self):
         self.search_bar = QLineEdit()
@@ -179,6 +184,7 @@ class View(QMainWindow):
                 if row > max_rows: max_rows = row
             column = column + 1
 
+        self.dialog_layout.addWidget(self.dialog_clear_filters_button, max_rows+1, 1)
         self.dialog_layout.addWidget(self.dialog_button, max_rows+1, 2)
 
     def close_dialog(self):
@@ -195,6 +201,14 @@ class View(QMainWindow):
         self.bodypart_options = {"Head and Neck": QCheckBox("Head and Neck"), "Chest": QCheckBox("Chest"),
                                  "Abdomen": QCheckBox("Abdomen"), "Upper Limbs": QCheckBox("Upper Limbs"),
                                  "Lower Limbs": QCheckBox("Lower Limbs"), "Other": QCheckBox("Other")}
+
+    def populate_filters_layout(self, active_filters):
+        self.filters_layout.addWidget(QLabel("Active Filters: "))
+        for i in range(len(active_filters)):
+            button = QPushButton(active_filters[i])
+            self.remove_filter_buttons.addButton(button, i)
+            self.filters_layout.addWidget(button)
+        self.filters_layout.addWidget(self.clear_filters_button)
 
     def display_pdf(self, filename, report_name, row, col):
         item = self.report_table.item(row, col)

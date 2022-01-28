@@ -8,7 +8,7 @@ class DB_Connection:
         # self.db = mysql.connect(
         #     host="localhost",
         #     user="root",
-        #     passwd="FYDP2022",
+        #     passwd="#Darren89candiesEW",
         #     database="ReportData")
 
         self.db = mysql.connect(
