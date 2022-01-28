@@ -131,6 +131,27 @@ class Model():
         self.current_filters = checked_filters
         return active_filters
 
+    def clear_filters_layout(self, filters_layout):
+        for i in reversed(range(filters_layout.count())):
+            widget_to_remove = filters_layout.itemAt(i).widget()
+            filters_layout.removeWidget(widget_to_remove)
+            widget_to_remove.setParent(None)
+
+    def reset_current_filters(self):
+        self.current_filters = None
+
+    def reset_filter_checkboxes(self, filter_checkboxes):
+        for i in range(len(filter_checkboxes)):
+            for key in filter_checkboxes[i].keys():
+                if filter_checkboxes[i][key].isChecked():
+                    filter_checkboxes[i][key].setChecked(False)
+
+    def uncheck_filter(self, filter_to_remove, filter_checkboxes):
+        for i in range(len(filter_checkboxes)):
+            for key in filter_checkboxes[i].keys():
+                if key == filter_to_remove.text():
+                    filter_checkboxes[i][key].setChecked(False)
+
     def get_checked_datatype(self, list, category=None):
         if len(list) == 0:
             return tuple(self.filter_options[category])
@@ -409,26 +430,7 @@ class Model():
         self.all_institutions = pd.read_csv('institution_list.csv')
        # print(self.all_institutions)
 
-    def clear_filters_layout(self, filters_layout):
-        for i in reversed(range(filters_layout.count())):
-            widget_to_remove = filters_layout.itemAt(i).widget()
-            filters_layout.removeWidget(widget_to_remove)
-            widget_to_remove.setParent(None)
 
-    def reset_current_filters(self):
-        self.current_filters = None
-
-    def reset_filter_checkboxes(self, filter_checkboxes):
-        for i in range(len(filter_checkboxes)):
-            for key in filter_checkboxes[i].keys():
-                if filter_checkboxes[i][key].isChecked():
-                    filter_checkboxes[i][key].setChecked(False)
-
-    def uncheck_filter(self, filter_to_remove, filter_checkboxes):
-        for i in range(len(filter_checkboxes)):
-            for key in filter_checkboxes[i].keys():
-                if key == filter_to_remove.text():
-                    filter_checkboxes[i][key].setChecked(False)
 
 class Label:
     def __init__(self, type, value):
