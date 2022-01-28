@@ -18,7 +18,8 @@ from PyQt5.QtCore import Qt, QStringListModel, QTextStream, QObject, pyqtSignal,
     QEvent, QModelIndex
 
 from PyQt5.QtWidgets import QGridLayout, QLabel, QToolBar, QStatusBar, QDialog, QTableWidgetItem, QHeaderView, \
-    QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox, QButtonGroup
+    QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox, \
+    QButtonGroup, QTreeWidget, QTreeWidgetItem, QAbstractItemView, QListWidget, QListWidgetItem
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -35,6 +36,7 @@ class View(QMainWindow):
         self.create_buttons()
         self.create_user_inputs()
         self.create_dialog_for_later()
+        # self.create_settings_dialog_for_later()
 
         self._createLayouts()
 
@@ -53,14 +55,17 @@ class View(QMainWindow):
         self.title_layout = QHBoxLayout()
         self.search_layout = QHBoxLayout()
         self.filters_layout = QHBoxLayout()
+        self.settings_layout = QHBoxLayout()
 
         self.populate_vertical_main()
-        self.create_table_grid()
+        # self.create_table_grid()
         self.populate_title_layout()
         self.populate_search_layout()
+        self.populate_settings_layout()
 
     def populate_vertical_main(self):
         self.vertical_main.addLayout(self.title_layout)
+        self.vertical_main.addLayout(self.settings_layout)
         self.vertical_main.addLayout(self.search_layout)
         self.vertical_main.addLayout(self.filters_layout)
         self.vertical_main.addLayout(self.table_grid)
@@ -68,20 +73,16 @@ class View(QMainWindow):
     def set_table_row_count(self, row_count):
         self.report_table.setRowCount(row_count)
 
-    def create_table_grid(self):
+    def create_table_grid(self, current_categories):
         self.report_table = QTableWidget()
         self.report_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.report_table.setMouseTracking(True)
-        self.report_table.setColumnCount(5)
+
         header_font = QFont()
         header_font.setBold(True)
         header_font.setPointSize(12)
 
-        self.report_table.setHorizontalHeaderLabels(['Date Added', 'File Name', 'Imaging Modality', 'Body Part', 'Notes'])
-        self.report_table.horizontalHeader().setStretchLastSection(True)
-       # self.report_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.report_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.report_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        self.create_table_columns(current_categories)
 
         self.report_table.horizontalHeader().setFont(header_font)
         self.report_table.verticalHeader().setVisible(False)
@@ -90,6 +91,18 @@ class View(QMainWindow):
         self.current_hover = [0]
         self.report_table.cellEntered.connect(self.cell_hover)
 
+
+    def create_table_columns(self, current_categories):
+        self.column_count = len(current_categories)
+        self.report_table.setColumnCount(self.column_count)
+        # self.report_table.setHorizontalHeaderLabels(['Date Added', 'File Name', 'Imaging Modality', 'Body Part', 'Notes'])
+        self.report_table.setHorizontalHeaderLabels(current_categories)
+        self.report_table.horizontalHeader().setStretchLastSection(True)
+        # self.report_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.report_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # self.report_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        # self.report_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+
     def cell_hover(self, row):
         underlined = QFont()
         underlined.setUnderline(True)
@@ -97,7 +110,7 @@ class View(QMainWindow):
         self.report_table.setCursor(Qt.PointingHandCursor)
 
         col = 0
-        for i in range(0, 5):
+        for i in range(0, self.column_count):
             item = self.report_table.item(row, col)
             old_item = self.report_table.item(self.current_hover[0], col)
             if self.current_hover != [row]:
@@ -134,6 +147,10 @@ class View(QMainWindow):
         self.search_layout.addWidget(self.filter_button)
         self.search_layout.addWidget(self.import_button)
 
+    def populate_settings_layout(self):
+        self.settings_layout.addStretch(1)
+        self.settings_layout.addWidget(self.settings_button)
+
     def create_buttons(self):
         self.filter_button = QPushButton("Filters")
         self.import_button = QPushButton("Import File")
@@ -143,6 +160,8 @@ class View(QMainWindow):
         self.clear_filters_button = QPushButton("Clear Active Filters")
         self.dialog_clear_filters_button = QPushButton("Clear Filters")
         self.remove_filter_buttons = QButtonGroup()
+        self.settings_button = QPushButton("User Preferences")
+        self.apply_settings_button = QPushButton("Apply Settings")
 
     def create_user_inputs(self):
         self.search_bar = QLineEdit()
@@ -201,6 +220,45 @@ class View(QMainWindow):
         self.bodypart_options = {"Head and Neck": QCheckBox("Head and Neck"), "Chest": QCheckBox("Chest"),
                                  "Abdomen": QCheckBox("Abdomen"), "Upper Limbs": QCheckBox("Upper Limbs"),
                                  "Lower Limbs": QCheckBox("Lower Limbs"), "Other": QCheckBox("Other")}
+
+    def create_settings_dialog_for_later(self):
+        self.settings_dialog = QDialog()
+        self.settings_dialog.setWindowTitle("User Preferences")
+        self.settings_dialog_layout = QGridLayout()
+        self.populate_settings_dialog()
+        self.settings_dialog.setLayout(self.settings_dialog_layout)
+
+    def populate_settings_dialog(self):
+        self.settings_dialog_layout.addWidget(QLabel("Select Visible Categories: "), 0, 0)
+        self.settings_dialog_layout.addWidget(QLabel("(drag to reorder)"), 1, 0)
+        self.settings_dialog_layout.addWidget(self.category_list)
+        self.settings_dialog_layout.addWidget(self.apply_settings_button)
+
+    def create_categories(self):
+        self.create_category_options()
+        self.category_list = QListWidget()
+        for checkbox in self.category_options:
+            item = QListWidgetItem(checkbox)
+            item.setFlags(item.flags())
+            if checkbox == "Exam Date" or checkbox == "File Name":
+                self.category_list.addItem(item)
+                item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
+                item.setCheckState(Qt.Checked)
+            else:
+                item.setFlags(item.flags()|Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+                item.setCheckState(Qt.Unchecked)
+                self.category_list.addItem(item)
+        self.category_list.setDragDropMode(self.category_list.InternalMove)
+
+    def create_category_options(self):
+        self.category_options = ["Exam Date", "File Name", "Imaging Modality", "Body Part",
+                              "Institution", "Clinician", "Notes"]
+
+    def show_settings_dialog(self):
+        self.settings_dialog.show()
+
+    def close_settings_dialog(self):
+        self.settings_dialog.close()
 
     def populate_filters_layout(self, active_filters):
         self.filters_layout.addWidget(QLabel("Active Filters: "))

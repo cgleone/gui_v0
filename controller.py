@@ -8,7 +8,10 @@ class Controller:
 
         self.view = view
         self.model = model
+        self.create_table_grid()
+        self.create_settings_dialog()
         self.connect_signals()
+
 
         # when we go to a patient's report screen:
         self.initial_reports_display()
@@ -25,6 +28,8 @@ class Controller:
         self.view.clear_filters_button.clicked.connect(self.clear_filters)
         self.view.dialog_clear_filters_button.clicked.connect(self.clear_dialog_filters)
         self.view.remove_filter_buttons.buttonClicked.connect(self.remove_one_filter)
+        self.view.settings_button.clicked.connect(self.select_settings)
+        self.view.apply_settings_button.clicked.connect(self.apply_settings)
 
     def view_report(self, row, col):
         filename, isPDF, name = self.model.view_report(row, col)
@@ -65,7 +70,7 @@ class Controller:
         self.view.close_dialog()
 
     def populate_filter_layout(self, active_filters):
-        self.model.clear_filters_layout(self.view.filters_layout)
+        self.model.clear_layout(self.view.filters_layout)
         if len(active_filters) != 0:
             self.view.populate_filters_layout(active_filters)
 
@@ -75,7 +80,7 @@ class Controller:
         self.display_report_info()
 
     def clear_filters(self):
-        self.model.clear_filters_layout(self.view.filters_layout)
+        self.model.clear_layout(self.view.filters_layout)
         self.model.reset_current_filters()
         self.model.reset_filter_checkboxes([self.view.mod_options, self.view.bodypart_options, self.view.date_options])
         self.initial_reports_display()
@@ -100,3 +105,23 @@ class Controller:
         self.view.set_table_row_count(self.rows)
         self.view.populate_report_table(self.reports)
         self.view.import_enabled(True)
+
+    def create_table_grid(self):
+        current_categories = self.model.current_categories
+        self.view.create_table_grid(current_categories)
+
+    def select_settings(self):
+        self.view.show_settings_dialog()
+
+    def apply_settings(self):
+        # determine which checkboxes are checked
+        self.model.determine_checked_categories(self.view.category_list)
+        self.view.create_table_columns(self.model.current_categories)
+        self.get_report_info_to_display(self.model.current_report_IDs)
+        self.display_report_info()
+        self.view.close_settings_dialog()
+
+    def create_settings_dialog(self):
+        self.view.create_categories()
+        self.model.update_view_category_list(self.view.category_list)
+        self.view.create_settings_dialog_for_later()

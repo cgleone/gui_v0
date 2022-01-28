@@ -4,6 +4,7 @@ import os
 from database_connector import DB_Connection
 from temp_nlp import generate_random_tags
 import pandas as pd
+from PyQt5.QtCore import Qt
 
 # temp patient id
 patient_id = 22
@@ -26,14 +27,19 @@ class Model():
 
         self.current_patient_ID = None
         self.current_filters = None
-        self.current_columns = None
+        self.current_categories = None
         self.filter_options = None
         self.date_filters = None
+        self.db_functions = None
+        self.current_report_IDs = None
 
         self.set_current_patient_ID(22)
         self.set_filter_options()
         self.set_date_filters()
         self.current_display_data_with_IDs = None
+        self.set_default_categories()
+        self.set_db_functions()
+
 
 
         self.short_form_dictionary = {"X-ray": ["x-ray", "xray"],
@@ -72,6 +78,18 @@ class Model():
                                          "AND date_sub(now(), interval 6 month)",
                              "1yr-5yrs": "between date_sub(now(), interval 5 year) AND date_sub(now(), interval 1 year)",
                              ">5yrs": "< date_sub(now(), interval 5 year)"}
+
+    def set_default_categories(self):
+        self.current_categories = ["Exam Date", "File Name", "Imaging Modality", "Body Part", "Notes"]
+
+    def set_db_functions(self):
+        self.db_functions = {"Exam Date": self.db_connection.get_report_date,
+                             "File Name": self.db_connection.get_report_name,
+                             "Imaging Modality": self.db_connection.get_report_modality,
+                             "Body Part": self.db_connection.get_report_bodypart,
+                             "Institution": self.db_connection.get_report_institution,
+                             "Clinician": self.db_connection.get_report_clinician,
+                             "Notes": self.db_connection.get_report_notes}
 
     def import_report(self, path):
         filename = path.split('/')[-1]
@@ -131,10 +149,10 @@ class Model():
         self.current_filters = checked_filters
         return active_filters
 
-    def clear_filters_layout(self, filters_layout):
-        for i in reversed(range(filters_layout.count())):
-            widget_to_remove = filters_layout.itemAt(i).widget()
-            filters_layout.removeWidget(widget_to_remove)
+    def clear_layout(self, layout):
+        for i in reversed(range(layout.count())):
+            widget_to_remove = layout.itemAt(i).widget()
+            layout.removeWidget(widget_to_remove)
             widget_to_remove.setParent(None)
 
     def reset_current_filters(self):
@@ -194,25 +212,27 @@ class Model():
     def get_reports_to_display(self, filtered_IDs=None):
         if filtered_IDs is None:
             report_IDs = self.db_connection.get_report_IDs(self.current_patient_ID)
+            self.current_report_IDs = report_IDs
             if report_IDs is None:
                 return None
         else:
             report_IDs = filtered_IDs
+            self.current_report_IDs = report_IDs
 
         display_data = []
         data_with_IDs = []
 
-        if self.current_columns is None:
-            for id in report_IDs:
-                display = [self.db_connection.get_report_date(id), self.db_connection.get_report_name(id),
-                           self.db_connection.get_report_modality(id), self.db_connection.get_report_bodypart(id),
-                           [["None"]]]
-                display_with_ID = [self.db_connection.get_report_date(id), self.db_connection.get_report_name(id),
-                           self.db_connection.get_report_modality(id), self.db_connection.get_report_bodypart(id),
-                           [["None"]], [[id]]]
+        for id in report_IDs:
+            display = []
+            display_with_ID = []
+            for category in self.current_categories:
+                display.append(self.db_functions[category](id))
+                display_with_ID.append(self.db_functions[category](id))
+            display_with_ID.append([[id]])
 
-                display_data.append(display)
-                data_with_IDs.append(display_with_ID)
+            display_data.append(display)
+            data_with_IDs.append(display_with_ID)
+
 
         report_IDs.reverse()
         display_data.reverse()
@@ -234,6 +254,20 @@ class Model():
             isPDF = False
         return filepath, isPDF, name
 
+
+    def determine_checked_categories(self, category_list):
+        checked_categories=[]
+        for i in range(category_list.count()):
+            category = category_list.item(i)
+            if category.checkState() == Qt.Checked:
+                checked_categories.append(category.text())
+        self.current_categories = checked_categories
+
+    def update_view_category_list(self, category_list):
+        for i in range(category_list.count()):
+            category = category_list.item(i)
+            if category.text() in self.current_categories:
+                category.setCheckState(Qt.Checked)
 
     def set_category_dict(self):
         self.category_dict = {"Modality": ["MRI", "CT", "Ultrasound", "X-ray"],

@@ -109,6 +109,11 @@ class DB_Connection:
         self.cursor.execute(query % report_ID)
         return self.cursor.fetchall()
 
+    def get_report_notes(self, report_ID):
+        query = "SELECT Notes FROM reports WHERE Report_ID='%s'"
+        self.cursor.execute(query % report_ID)
+        return self.cursor.fetchall()
+
     def search_by_label(self, label, specified_category=None):
         if specified_category:
             query = "SELECT Report_ID FROM labels WHERE " + specified_category + "=" + "'" + label + "'"
