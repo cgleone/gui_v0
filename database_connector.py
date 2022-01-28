@@ -136,6 +136,9 @@ class DB_Connection:
         labels = labels + self.cursor.fetchall()
         return labels
 
+    def get_all_clinicians(self):
+        self.cursor.execute("SELECT Clinician FROM labels")
+        return self.cursor.fetchall()
 
 
 # test_db = DB_Connection()

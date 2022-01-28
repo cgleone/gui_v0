@@ -22,6 +22,7 @@ class Controller:
         self.view.dialog_button.clicked.connect(self.apply_filters)
         self.view.report_table.cellPressed.connect(self.view_report)
         self.view.go_button.clicked.connect(self.begin_search)
+        self.view.search_bar.returnPressed.connect(self.begin_search)
 
     def view_report(self, row, col):
         filename, isPDF, name = self.model.view_report(row, col)
