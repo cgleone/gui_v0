@@ -30,7 +30,7 @@ class View(QMainWindow):
         super().__init__()
 
         # window size and title
-        self.setWindowTitle("FYDP GUI Test")
+        self.setWindowTitle("EMR Report Viewer")
         self.setFixedSize(1000,700)
         self._createMainWidget()
         self.create_buttons()

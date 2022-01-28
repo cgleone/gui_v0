@@ -1,3 +1,4 @@
+import pickle
 import shutil
 from OCR import ocr_main
 import os
@@ -6,6 +7,7 @@ from temp_nlp import generate_random_tags
 import pandas as pd
 from PyQt5.QtCore import Qt
 import datetime
+from models.minimal_model import MinimalModel
 
 
 patient_id = 22
@@ -15,6 +17,8 @@ class Model():
 
     def __init__(self):
         self.db_connection = DB_Connection()
+        self.nlp_model = MinimalModel()
+        self.set_nlp_params()
 
         self.current_patient_ID = None
         self.current_filters = None
@@ -61,6 +65,11 @@ class Model():
         self.clinicians_in_db = self.update_clinician_list()
         self.read_csv()
 
+    def set_nlp_params(self):
+        with open('models/minimal_model_data/parameters.pkl', 'rb') as f:
+            parameters = pickle.load(f)
+        self.nlp_model.set_parameters(parameters)
+
     def update_clinician_list(self):
         clinicians = self.db_connection.get_all_clinicians()
         clin_list = list(set(self.get_untupled_label_list(clinicians)))
@@ -102,10 +111,16 @@ class Model():
         shutil.copy(path, 'OCR/reports_temp/'+filename)
         self.call_ocr(filename, id)
         self.call_nlp(id)
+        #self.call_fake_nlp(id)
 
     def call_ocr(self, filename, id):
         report_text = ocr_main.run_ocr(filename)
         self.save_ocr_result(filename, id, report_text)
+
+    def call_fake_nlp(self, report_id):
+        labels = generate_random_tags()
+        label_args = [patient_id, report_id] + labels
+        self.db_connection.add_labels(label_args)
 
     def get_unique_report_paths(self, report_name, id):
         filename = report_name.split('.')[0]
@@ -119,11 +134,19 @@ class Model():
         file = open(text_path, "w+")
         file.write(result)
         file.close()
-        self.db_connection.add_report(patient_id, id, report_name.split('.')[0], file_path, text_path)
+        self.db_connection.add_report(patient_id, id, report_name.split('.')[0], file_path, text_path, "")
         self.update_clinician_list()
 
     def call_nlp(self, report_id):
-        labels = generate_random_tags()
+        text_file = self.db_connection.get_text_path(report_id)[0][0]
+        file = open(text_file, 'r')
+        text = file.read()
+        file.close()
+
+        nlp_data = self.nlp_model.predict({0: text})[0]
+        labels = [nlp_data['modality'], nlp_data['body_part'], nlp_data['clinic_name'],
+                  nlp_data['dr_name'], nlp_data['date_of_procedure']]
+
         label_args = [patient_id, report_id] + labels
         self.db_connection.add_labels(label_args)
 
