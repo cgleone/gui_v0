@@ -244,6 +244,7 @@ class Model():
         data_with_IDs.reverse()
         self.current_display_data_with_IDs = data_with_IDs
         print("display data: {}".format(display_data))
+        self.current_report_IDs.reverse()
         return display_data
 
     def view_report(self, row, col):
