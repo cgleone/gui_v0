@@ -14,7 +14,7 @@ class DB_Connection:
         self.db = mysql.connect(
             host="localhost",
             user="root",
-            passwd="#Darren89candiesEW!",
+            passwd="FYDP2022",
             database="reportdata")
 
         self.cursor = self.db.cursor()
@@ -76,9 +76,9 @@ class DB_Connection:
         query = "SELECT Exam_Date FROM labels WHERE Report_ID='%s'"
         self.cursor.execute(query % report_ID)
         print(report_ID)
-        datetime = self.cursor.fetchone()[-1]
+        datetime = self.cursor.fetchone()
         print(datetime)
-        date_string = datetime.strftime("%Y-%m-%d")
+        date_string = datetime[-1].strftime("%Y-%m-%d")
         return [(date_string,),]
 
     def get_report_modality(self, report_ID):

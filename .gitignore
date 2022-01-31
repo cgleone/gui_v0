@@ -13,6 +13,7 @@ __pycache__/
 report_texts/*
 reports_temp/*
 reports/*
+OCR/testing_texts/*
 
 # exception to the rule
 report_texts/.gitkeep
