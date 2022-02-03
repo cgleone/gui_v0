@@ -10,7 +10,7 @@ import datetime
 from models.minimal_model import MinimalModel
 
 
-patient_id = 22
+
 
 
 class Model():
@@ -79,6 +79,13 @@ class Model():
     def set_current_patient_ID(self, ID):
         self.current_patient_ID = ID
 
+    def get_patient_name(self):
+        first = self.db_connection.get_patient_first_name(self.current_patient_ID)[0][0]
+        last = self.db_connection.get_patient_last_name(self.current_patient_ID)[0][0]
+        print(first)
+        print(last)
+        return first + ' ' + last
+
     def set_filter_options(self):
         self.filter_options = {"modalities": ["X-ray", "MRI", "CT", "Ultrasound"],
                                "bodyparts": ["Head and neck", "Chest", "Abdomen", "Upper Limbs", "Lower Limbs",
@@ -119,7 +126,7 @@ class Model():
 
     def call_fake_nlp(self, report_id):
         labels = generate_random_tags()
-        label_args = [patient_id, report_id] + labels
+        label_args = [self.current_patient_ID, report_id] + labels
         self.db_connection.add_labels(label_args)
 
     def get_unique_report_paths(self, report_name, id):
@@ -134,7 +141,7 @@ class Model():
         file = open(text_path, "w+")
         file.write(result)
         file.close()
-        self.db_connection.add_report(patient_id, id, report_name.split('.')[0], file_path, text_path, "")
+        self.db_connection.add_report(self.current_patient_ID, id, report_name.split('.')[0], file_path, text_path, "")
         self.update_clinician_list()
 
     def call_nlp(self, report_id):
@@ -147,7 +154,7 @@ class Model():
         labels = [nlp_data['modality'], nlp_data['body_part'], nlp_data['clinic_name'],
                   nlp_data['dr_name'], nlp_data['date_of_procedure']]
 
-        label_args = [patient_id, report_id] + labels
+        label_args = [self.current_patient_ID, report_id] + labels
         self.db_connection.add_labels(label_args)
 
     def set_filters(self, modalities, bodyparts, dates):
@@ -236,6 +243,19 @@ class Model():
             date_IDs = self.db_connection.get_filtered_date_IDs(query_values)
             total_ids = total_ids + date_IDs
         return total_ids
+
+    def get_patient_data(self):
+        prepped_data = []
+        data = self.db_connection.get_patient_info()
+        for patient in data:
+            prepped_patient = list(patient)
+            prepped_patient[0] = str(patient[0])
+            dob = prepped_patient[4]
+            dob = dob.strftime("%Y-%m-%d")
+            prepped_patient[4] = dob
+            prepped_data.append(prepped_patient)
+
+        return prepped_data
 
     def get_reports_to_display(self, filtered_IDs=None):
         if filtered_IDs is None:
@@ -400,6 +420,8 @@ class Model():
     def search(self, user_query):
 
         all_current_label_options = self.get_untupled_label_list(self.db_connection.get_all_labels())
+        all_current_label_options = filter(None.__ne__, all_current_label_options)
+
         labels_searched_for, date_in_search = self.label_search_main(user_query, all_current_label_options)
         if len(labels_searched_for) == 0 and date_in_search == [[], []]:
             return []
@@ -503,6 +525,8 @@ class Model():
         return [exact_match_segments, query]
 
     def is_exact_label_match(self, query, labels):
+        thing = query.lower()
+        idk = map(str.lower, labels)
         if query.lower() in map(str.lower, labels):
             return True
         else:

@@ -31,6 +31,27 @@ class Controller:
         self.view.remove_filter_buttons.buttonClicked.connect(self.remove_one_filter)
         self.view.settings_button.clicked.connect(self.select_settings)
         self.view.apply_settings_button.clicked.connect(self.apply_settings)
+        self.view.home.select_button.clicked.connect(self.patient_select_screen)
+        self.view.home.quit_button.clicked.connect(self.view.close)
+        self.view.patient_select.back_button.clicked.connect(self.view.go_to_home)
+        self.view.patient_select.patient_table.cellPressed.connect(self.view_patient)
+        self.view.back_button.clicked.connect(self.patient_select_screen)
+        self.view.main_menu_button.clicked.connect(self.view.go_to_home)
+
+
+    def patient_select_screen(self):
+        self.view.go_to_patient_select()
+        patient_data = self.model.get_patient_data()
+        self.view.patient_select.populate_table(patient_data)
+
+    def view_patient(self, row, col):
+        patient = self.view.patient_select.patient_table.item(row, 0).text()
+        self.model.set_current_patient_ID(int(patient))
+        self.get_report_info_to_display()
+        self.display_report_info()
+        self.view.set_patient_name(self.model.get_patient_name())
+        self.view.go_to_report_screen()
+
 
     def view_report(self, row, col):
         filename, isPDF, name = self.model.view_report(row, col)
@@ -44,7 +65,6 @@ class Controller:
         report_IDs = self.model.search(user_query)
         self.get_report_info_to_display(report_IDs)
         self.display_report_info()
-
 
     def import_file(self):
         self.view.show_directory()
@@ -100,7 +120,6 @@ class Controller:
     def get_report_info_to_display(self, ids=None):
         self.reports = self.model.get_reports_to_display(ids)
         self.rows = len(self.reports)
-
 
     def display_report_info(self):
         self.view.set_table_row_count(self.rows)

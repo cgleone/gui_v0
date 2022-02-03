@@ -7,35 +7,20 @@ Canadian Magnetic Imaging,CMI
 Medvue medical Imaging - Concorde Clinic,Medvue
 ProScan Imaging Ontario,PIO
 Central Alberta Medical Imaging Services LTD,CAMIS
-False Creek Health Care Centre,FCHCC
 Viamedica Medical Center / Imaging Services,VMC
 Cleveland Clinic Canada,CCC
-Pembina High-Field MRI,PHF
-VM Medical MRI Center,VM MRI
-VM Medical Nuclear Imaging and PET/CT,VM Nuclear
-Kingston MRI,KM
-Priority MRI,Priority
-imaging Clinic Reso-Concorde Reso-Carrefour,Reso-Concourde
 ExecHealth INC.,EHI
-College Plaza Sports Medicine Imaging Centre,CPSMIC
-Keswick Advanced Imaging center,KAIC
-Fraser Valley MRI Clinic,Fraser Valley
-Pureform Radiiology-Airdrie Clinic,Airdrie
-Pureform Radiiology-SouthTrail Clinic,SouthTrail
-Buffalo MRI,BM
+Pureform Radiiology-Airdrie Clinic,Pureform
+Pureform Radiiology-SouthTrail Clinic,Pureform
 Axxess Imaging,AI
-Welcome Back MRI and Pain Management Centre,WBMPMC
 Imagix-Granby,Granby
 Healthview Medical Imaging,HMI
-IRM Moncton MRI,IRM
-Medical Imaging-Sherbrooke Clinic,MI-Sherbrooke
-Alberta Thermography,AT
 Insight Medical Imaging,IMI
-Insight Medical Imaging - Sherwood Park,IMI Sherwood
+Insight Medical Imaging - Sherwood Park,IMI
 Erie St Clair Radiology,Erie St Clair
-Insight Medical Imaging - Heritage,IMI Heritage
-Insight Medical Imaging - Lendrum Women's Imaging,IMI Lendrum
-Insight Medical Imaging - Millwoods,IMI Millwoods
+Insight Medical Imaging - Heritage,IMI
+Insight Medical Imaging - Lendrum Women's Imaging,IMI
+Insight Medical Imaging - Millwoods,IMI
 MIC Medical Imaging - Namao 160,MIC
 MIC Medical Imaging,MIC
 MIC Medical Imaging - Stratford,MIC
@@ -44,27 +29,20 @@ MIC Medical Imaging - College Plaza,MIC
 Medcan Clinic,MC
 MIC Medical Imaging - Oakville,MIC
 MIC Medical Imaging - Allini Clinic,MIC
-Centre For Advanced Diagnostics,CAD
-Champlain Surgical Solutions,CSS
-Insight Medical Imaging-Fort McMurray,IMI Fort McMurray
-Medisys CT Scan Clinic,Medisys
-Image One MRI Clinic INC.,Image One
-Insight Medical Imaging-Leduc,IMI Leduc
-Inisght Medical Imaging - Meadowclark Diagnositc Imaging,IMI Meadowclark
-Insight Medical Imaging - West End,IMI West End
+Insight Medical Imaging-Fort McMurray,IMI
+Insight Medical Imaging-Leduc,IMI
+Inisght Medical Imaging - Meadowclark Diagnositc Imaging,IMI
+Insight Medical Imaging - West End,IMI
 MIC Medical Imaging - Ajax,MIC 
 MIC Medical Imaging - HYS Centre,MIC
-Surrey MRI Clinic,Surrey
 Ontario Independent Assessment Centrre,OIAC
 MIC Medical Imaging - Century Park,MIC
 Hamilton-Smith Consultants,HSC
-Insight Medical Imaging - Oliver Square,IMI Oliver Square
+Insight Medical Imaging - Oliver Square,IMI
 Pasqua South Medical Aesthetics,PSMA
-Insight Medical Imagnig - Spruce Grove,IMI Spruce Grove
-Ottawa Valley MRI,OVM
-MedCentra - MRI ASAP,MedCentra
+Insight Medical Imagnig - Spruce Grove,IMI
 Grand River Hospital,GRH
-Brantford General Hospital,BGH
+Brantford Community Healthcare System,BCHS
 Stevenson Memorial Hospital,SMH
 Royal Victoria Hospital,RVH
 South Muskoka Memorial Hospital,SMMH
@@ -73,41 +51,31 @@ Collingwood General and Marine Hospital,CGMH
 Durham Memorial Hospital,DMH
 St. Francis Memorial Hospital,SFMH
 Lakeridge Health Bowmanville,LHB
-North Hastings District Hospital,NHDH
-Englehart and District Hospital,EDH
 Espanola General Hospital,EGH
 Groves Memorial Community Hospital,GMCH
-Haldimar War Memorial Hospital,HWMH
-Niagara Health System Douglas Memorial Hospital,DMH
+Haldimand War Memorial Hospital,HWMH
+Niagara Health System Douglas Memorial Hospital,NHSDMH
 Georgetown Hospital,GH
-Geraldton General Hospital,GGH
-Alexander Marine Hospital,AMH
+Alexandra Marine Hospital,AMH
 Guelph General Hospital,GGH
-St. Joseph's Health Center,SJHC
+St. Joseph's Health System,SJHS
 Haliburton Hospital,HH
 Hamilton Health Services ,HHS
 St. Peters Hospital,SPH
 Hanover District Hospital,HDH
-Alexandra Hospital,AH
-Huntsville Memorial District Hospital,HMDH
 Kingston General Hospital,KGH
-Hotel Dieu,HD
 Kirkland and District Hospital,KDH
-Freeport Hospital,FP
 Manitoulin Health Centre,MHC
 London Health Sciences Centre,LHSC
 Manitouwadge General Hospital,MGH
 Wilson Memorial Hospital,WMH
-Meaford General Hospital,MGH
 Georgian Bay General Hospital,GBGH
 Milton District Hospital,MDH
 Credit Valley Hospital,CVH
 Trillium Health Centre,THC
-Moose Factory Hospital,MFH
 North Bay General Hospital,NBGH
 Children's Hospital of Eastern Ontario,CHEO
 Montfort Hospital,MH
-National Defence Medical Centre,NDMC
 The Ottawa Hospital ,TOH
 Queensway-Carleton Hospital,QCH
 Grey Bruce Health Services,GBHS
@@ -116,10 +84,7 @@ Pembroke Regional Hospital,PRH
 Norfolk General Hospital,NGH
 Sault Area Hospital,SAH
 West Nipissing General Hospital,WNGH
-Smiths Falls Community Hospital,SFCH
-St. Thomas Elgin General Hospital,STEGH
 Temiskaming Hospital,TH
-Etobicoke General Hospital,EGH
 Hospital for Sick Children,HSC
 Humber River Regional Hospital,HRRH
 Mount Sinai Hospital,MSH
@@ -127,59 +92,40 @@ North York General Hospital,NYGH
 Rouge Valley Centenary,RVC
 Scarborough Hospital,SH
 St. Josephs Health Centre,SJHC
-St. Michael's Hospital,SMH
 Sunnybrook Health Sciences Centre,Sunnybrook
-Michael Garron Hospital,MGH
 Toronto Grace Health Centre,TGHC
-Toronto Rehabilitation Institute,TRI
 Princess Margaret Cancer Centre,Princess Margaret
 Toronto General Hospital,TGH
 Toronto Western Hospital,TWH
 Women's College Hospital,WCH
 Woodstock General Hospital,WGH
-Markham Stouffville Hospital,MSH
 Southlake Regional Health Centre,SRHC
 Alberta Hospital Edmonton,AHE
 Royal Alexandra Hospital,RAH
-Foothills Medical Centre ,FMC
 Alberta Children's Hospital,ACH
-Kelowna General Hospital,KGH
-Richmond Hospital,RH
-Surrey Memorial Hospital,SMH
 BC Cancer Agency,BCCA
 British Columbia Children's Hospital,BCCH
 B.C. Women's Hospital & Health Centre,BCWHHC
 Vancouver General Hospital,VGH
-Royal Jubilee Hospital,RJH
-Victoria General Hospital,VGH
 The Children's Hospital of Winnipeg,CHW
-Grace Hospital,GH
-Victoria General Hospital,VGH
 Saint Boniface General Hospital,SBGH
 Dartmouth General Hospital,DGH
 Queen Elizabeth II Health Sciences Centre,QEHSC
 Cape Breton Regional Hospital,CBRH
 Yarmouth Regional Hospital ,YRH
-Hillsborough Hospital,HH
 McGill University Health Centre,MUHC
-Hopital Notre-Dame,HND
-Hotel-Dieu de Quebec,HDQ
-Whitehorse General Hospital,WGH
 Saskatoon City Hospital,SCH
 Royal University Hospital,RUH
 Waterloo Nuclear and Radiology Inc.,WNR
 KMH Cardiology Centre,KMHCC
-Cambridge Medical Imaging ,CMI
-Guelph Medical Imaging,GMI
 Fast Track MRI and Diagnostics,FTMD
 Brantford Radiology Group ,BRG
 Greater Niagara Medical Imaging,GNMI
-Woodstock Diagnostic Imaging,WDI
-Credit Valley Diagnostic Centre,CVDI
-Vodden X-Ray & Ultrasound Clinic,VXUC
+Bolton Medical Imaging,BMI
 Insight Diagnostic Imaging,IDI
 Yorkview X-Ray & Ultrasound,YXU
-Yonge & Eglinton Diagnostic Imaging,YEDI
 Carmit Diagnostic Imaging ,CDI
 Mayfair Diagnostics,MD
-Skyway Radiology,SR
+BGSA Radiology,BGSA
+Gam Diagnostic Imaging,GDI
+Georgian Radiology Consultants,GRC

@@ -92,7 +92,6 @@ def prep_image(file):
             return [jpg_path.split('/')[-1]]
 
 
-
 def run_ocr(file_name):
     print("filename: ")
     print(file_name)

@@ -1,9 +1,12 @@
+import math
 import os
 from time import sleep
 
 from PyQt5.QtGui import QPixmap, QBrush, QColor, QFont
 
 import controller
+from patient_select import PatientSelectScreen
+from home import HomeScreen
 
 import sys
 # Import QApplication and the required widgets from PyQt5.QtWidgets
@@ -19,7 +22,7 @@ from PyQt5.QtCore import Qt, QStringListModel, QTextStream, QObject, pyqtSignal,
 
 from PyQt5.QtWidgets import QGridLayout, QLabel, QToolBar, QStatusBar, QDialog, QTableWidgetItem, QHeaderView, \
     QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox, \
-    QButtonGroup, QTreeWidget, QTreeWidgetItem, QAbstractItemView, QListWidget, QListWidgetItem
+    QButtonGroup, QTreeWidget, QTreeWidgetItem, QAbstractItemView, QListWidget, QListWidgetItem, QStackedWidget
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -29,27 +32,55 @@ class View(QMainWindow):
         """View initializer."""
         super().__init__()
 
+        self.home = HomeScreen()
+        self.patient_select = PatientSelectScreen()
+        self.report_screen = QWidget()
         # window size and title
         self.setWindowTitle("EMR Report Viewer")
         self.setFixedSize(1000,700)
-        self._createMainWidget()
         self.create_buttons()
         self.create_user_inputs()
         self.create_dialog_for_later()
         # self.create_settings_dialog_for_later()
 
+        self.patient_name = "Default"
+        self.patient_label = QLabel("Patient: Default")
+
+        self.stacked_widget = QStackedWidget()
+        self.stacked_widget.addWidget(self.home)
+        self.stacked_widget.addWidget(self.patient_select)
+        self.stacked_widget.addWidget(self.report_screen)
+        self.setCentralWidget(self.stacked_widget)
         self._createLayouts()
+
+        self.go_to_home()
 
         # self._createMenu()
         # self._createStatusBar()
 
-    def _createMainWidget(self):
-        widget = QWidget()
-        self.setCentralWidget(widget)
+    def go_to_home(self):
+
+        self.stacked_widget.setCurrentWidget(self.home)
+
+        # h = self.size().height()/2
+        # w = self.size().width()/2
+        # sides = math.floor(w-200)
+        # top = math.floor(h-150)
+        # self.setContentsMargins(sides, top, 0, 0) # left top right bottom
+
+    def go_to_patient_select(self):
+        self.stacked_widget.setCurrentWidget(self.patient_select)
+
+    def go_to_report_screen(self):
+        self.stacked_widget.setCurrentWidget(self.report_screen)
+
+    def set_patient_name(self, name):
+        self.patient_name = name
+        self.patient_label.setText("Patient: {}".format(self.patient_name))
 
     def _createLayouts(self):
         self.vertical_main = QVBoxLayout()
-        self.centralWidget().setLayout(self.vertical_main)
+        self.report_screen.setLayout(self.vertical_main)
 
         self.table_grid = QGridLayout()
         self.title_layout = QHBoxLayout()
@@ -128,18 +159,15 @@ class View(QMainWindow):
             row_data = report_data[i]
             for j in range(len(row_data)):
                 cell_data = row_data[j][0][0]
-
-                # if j == 1:
-                #     self.report_table.setItem(i, j, custom_widgets.ClickableLabel(cell_data, i, click_event))
-                # else:
                 self.report_table.setItem(i, j, QTableWidgetItem(cell_data))
 
 
 
     def populate_title_layout(self):
        # self.title_layout.addWidget(QLabel("Patient Portal Demo"))
-        self.title_layout.addWidget(QLabel("Patient: Cathleen Leone, 22F, 04/04/1999"), 3)
-        self.title_layout.addWidget(self.logout_button, 1)
+        self.title_layout.addWidget(self.patient_label, 2)
+        self.title_layout.addWidget(self.back_button, 1)
+        self.title_layout.addWidget(self.main_menu_button, 1)
 
     def populate_search_layout(self):
         self.search_layout.addWidget(self.search_bar)
@@ -156,7 +184,8 @@ class View(QMainWindow):
         self.import_button = QPushButton("Import File")
         self.go_button = QPushButton("Go")
         self.dialog_button = QPushButton("Apply Filters")
-        self.logout_button = QPushButton("Logout")
+        self.back_button = QPushButton("Select A Different Patient")
+        self.main_menu_button = QPushButton("Back to Main Menu")
         self.clear_filters_button = QPushButton("Clear Active Filters")
         self.dialog_clear_filters_button = QPushButton("Clear Filters")
         self.remove_filter_buttons = QButtonGroup()
