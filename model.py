@@ -420,7 +420,6 @@ class Model():
     def search(self, user_query):
 
         all_current_label_options = self.get_untupled_label_list(self.db_connection.get_all_labels())
-        all_current_label_options = filter(None.__ne__, all_current_label_options)
 
         labels_searched_for, date_in_search = self.label_search_main(user_query, all_current_label_options)
         if len(labels_searched_for) == 0 and date_in_search == [[], []]:
@@ -535,7 +534,8 @@ class Model():
     def get_untupled_label_list(self, tupled_list):
         new_list = []
         for tuple in tupled_list:
-            new_list.append(tuple[0])
+            if tuple[0] is not None:
+                new_list.append(tuple[0])
         new_list = list(dict.fromkeys(new_list)) # remove repeated items
         return new_list
 

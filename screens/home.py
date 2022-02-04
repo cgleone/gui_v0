@@ -1,25 +1,8 @@
-import os
-from time import sleep
-
-from PyQt5.QtGui import QPixmap, QBrush, QColor, QFont
-
-import controller
-
-import sys
-# Import QApplication and the required widgets from PyQt5.QtWidgets
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtWidgets import QMainWindow
-from PyQt5.QtWidgets import QWidget
-import PyQt5.QtWebEngineWidgets
-#import PyQt5.QtGui.QAbstractItemView.NoEditTriggers
 
 
-from PyQt5.QtCore import Qt, QStringListModel, QTextStream, QObject, pyqtSignal, QThread, QRect, QPersistentModelIndex, \
-    QEvent, QModelIndex
-
-from PyQt5.QtWidgets import QGridLayout, QLabel, QToolBar, QStatusBar, QDialog, QTableWidgetItem, QHeaderView, \
-    QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox, \
-    QButtonGroup, QTreeWidget, QTreeWidgetItem, QAbstractItemView, QListWidget, QListWidgetItem
+from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import QWidget, QPushButton, QVBoxLayout
+from PyQt5.QtCore import Qt
 
 
 
