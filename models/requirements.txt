@@ -14,7 +14,14 @@ transformers
 farm-haystack
 thefuzz
 
+# Models
+en-core-sci-md
+
 # Misc
 dateparser
 python-Levenshtein
 tqdm
+seqeval
+boto3
+smart-open
+more-itertools
