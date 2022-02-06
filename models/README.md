@@ -142,3 +142,65 @@ outputs = {
 }
 results = {'000-000': outputs}
 ```
+
+# Training Model API
+Models for training will implement the following public methods:
+```
+model.train(X_train, Y_train, **hyperparameters): Trains the model on the input data and labels, outputs metrics of training
+model.preprocess(X, Y): Processes the input data to convert it into the desired form
+model.evaluate(X_test, Y_test): Evaluate performance of the model on the training data
+```
+
+## Data snapshot
+We will have a consistent format of the data called a "data snapshot". This is compilation of the data saved in various files into a single, unified structure that can be versioned accordingly. Models will expect all input data in this format and can further process it to their needs.
+
+Data snapshots will be a dictionary with the keys as the ID of the path the source files came from and the values as a "document" as described below.
+```
+snapshot = {
+    'path/to/file/0': document_0,
+    'path/to/file/1': document_1,
+    ...
+    'path/to/file/n': document_n
+}
+
+document = {
+    'text': 'The actual report text as a single string with new lines denoted by \n characters.'
+    'labels': {
+        'label_1': {'label': <label to predict>, 'true text': <actual text found in the associated text>},
+        'label_2': {'label': ..., 'true text': ...},
+        ...
+        'label_n': value_n
+    }
+}
+```
+
+For the models, we care about 5 of these labels below. Any other labels are extra information.
+`['Doctor Name', 'Date Taken', 'Clinic Name', 'Body Part', 'Modality']`
+
+## Training data
+Models will train on training data. This is a pre-processed version of the data snapshot so that the labels are in the specific format for that model's training regime. Training data can be generated from a snapshot and will be in the form of a pandas DataFrame, which can be saved to avoid re-doing pre-processing steps. The DataFrame will have integer index starting from 0. The columns will be as follows:
+
+```
+text: str, contains the text to pass into the model's tokenizer, must be less than the max sequence length
+label: various, the label required by the model as the supervised output. For NER, this can be a np.ndarray of integer labels, for classification, it might just be a single integer
+id: str, a string indicating the source id plus an additional number indicating the sub-text part.
+
+Example row:
+row = {
+    'text': 'This is a report text that will be passed into the model',
+    'label': 0,
+    'id': path/to/file/0_0
+}
+```
+
+## Data transformations
+The following terminology applies to data transformations.
+- list .txt file paths &rarr; data snapshot: snapshotting
+- data snapshot &rarr; training data: **preprocessing**
+- training data &rarr; model training metrics: **training**
+- held out test data &rarr; model testing metrics: **evaluating**
+    - held out test data snapshot &rarr; valid model data: preprocessing
+    - held out test data &rarr; predicted tags: inferencing
+    - model outputs &rarr; tags: output processing
+
+Therefore, the `preprocess()`, `train()`, and `evaluate()` methods should take those inputs and produce those outputs as specified above.
