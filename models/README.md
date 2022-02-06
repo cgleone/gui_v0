@@ -204,3 +204,7 @@ The following terminology applies to data transformations.
     - model outputs &rarr; tags: output processing
 
 Therefore, the `preprocess()`, `train()`, and `evaluate()` methods should take those inputs and produce those outputs as specified above.
+
+
+## Models need stuff
+`LEARNING_RATE, MAX_SEQ_LEN, HF_URL, RANDOM_SEED, BATCH_SIZE, MAX_GRAD_NORM, DATA_LEN, EPOCHS, LABELS_TO_CLASSES, CLASSES_TO_LABELS`
