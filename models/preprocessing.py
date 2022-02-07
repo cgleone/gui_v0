@@ -5,7 +5,9 @@ import pickle
 
 
 class Document(UserDict):
-    """Datastructure for holding text and label information"""
+    """Datastructure for holding text and label information
+    Add convenince functions for getting labels we care about and looking up mostly in the labels dict
+    """
     def __init__(self, data):
         super().__init__(data)
         self.text = data.get('text', '')
