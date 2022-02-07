@@ -12,12 +12,12 @@ class TrainingModel(ModelApi):
 
     def preprocess(self, data_snapshot):
         """Transform data snapshot into training data"""
-        # Text
-            # Determine how to chunk the text by the MAX_SEQ_LEN, doing best to keep within newlines
-            # Re-label each chunk with 'text_id' + '_' + i, where i is the enumeration of that chunk
+        # Text:
+        #    Determine how to chunk the text by the MAX_SEQ_LEN, doing best to keep within newlines
+        #    Re-label each chunk with 'text_id' + '_' + i, where i is the enumeration of that chunk
         # Labels
-            # Generate training labels for chunk from that document's text
-            # Labels need to be saved with the same key as the text chunks
+        #    Generate training labels for chunk from that document's text
+        #    Labels need to be saved with the same key as the text chunks
         # Save all these into a dataframe
         pass
 
@@ -35,8 +35,8 @@ class TrainingModel(ModelApi):
         """Evaluate model performance on held-out test data and record test evaluation metrics"""
         # Transform data snapshot into training data
         # For each document in the snapshot
-            # Pre-process text into correct format (splitting if needed)
-            # Labels prepared to compare to tags extracted
+        #    Pre-process text into correct format (splitting if needed)
+        #    Labels prepared to compare to tags extracted
         # Run inference for the entire text
         # Transform model outputs into tags for that text
         # Compute metric for that document in the snapshot
