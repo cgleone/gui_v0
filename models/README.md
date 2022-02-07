@@ -196,7 +196,9 @@ row = {
 ## Data transformations
 The following terminology applies to data transformations.
 - list .txt file paths &rarr; data snapshot: snapshotting
+    - Snapshot processing can remove unwanted characters/text
 - data snapshot &rarr; training data: **preprocessing**
+   - Only splitting text into training data and generating labels
 - training data &rarr; model training metrics: **training**
 - held out test data &rarr; model testing metrics: **evaluating**
     - held out test data snapshot &rarr; valid model data: preprocessing
