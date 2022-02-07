@@ -77,7 +77,7 @@ class DB_Connection:
         self.cursor.execute(query % report_ID)
         print(report_ID)
         datetime = self.cursor.fetchone()
-        print(datetime)
+        # print(datetime)
         date_string = datetime[-1].strftime("%Y-%m-%d")
         return [(date_string,),]
 
@@ -146,6 +146,10 @@ class DB_Connection:
         self.cursor.execute(query)
         return self.cursor.fetchall()
 
+    def get_patient_info(self):
+        query = "SELECT * FROM patients"
+        self.cursor.execute(query)
+        return self.cursor.fetchall()
 
     def get_all_labels(self):
         self.cursor.execute("SELECT Institution FROM labels")
@@ -184,8 +188,20 @@ class DB_Connection:
         self.cursor.execute(query % values)
         self.db.commit()
 
+    def get_patient_last_name(self, patient_ID):
+        query = "SELECT Last_name FROM patients WHERE patient_ID='%s'"
+        self.cursor.execute(query % patient_ID)
+        return self.cursor.fetchall()
+
+    def get_patient_first_name(self, patient_ID):
+        query = "SELECT First_name FROM patients WHERE patient_ID='%s'"
+        self.cursor.execute(query % patient_ID)
+        return self.cursor.fetchall()
 
 
-# test_db = DB_Connection()
+
+
+test_db = DB_Connection()
 # test_db.get_report_IDs(4)
 # test_db.get_report_date(4)
+# print(test_db.get_patient_info())

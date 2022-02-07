@@ -10,7 +10,7 @@ import datetime
 from models.minimal_model import MinimalModel
 
 
-patient_id = 22
+
 
 
 class Model():
@@ -86,6 +86,13 @@ class Model():
     def set_current_physician_ID(self, ID):
         self.current_physician_ID = ID
 
+    def get_patient_name(self):
+        first = self.db_connection.get_patient_first_name(self.current_patient_ID)[0][0]
+        last = self.db_connection.get_patient_last_name(self.current_patient_ID)[0][0]
+        print(first)
+        print(last)
+        return first + ' ' + last
+
     def set_filter_options(self):
         self.filter_options = {"modalities": ["X-ray", "MRI", "CT", "Ultrasound"],
                                "bodyparts": ["Head and neck", "Chest", "Abdomen", "Upper Limbs", "Lower Limbs",
@@ -141,8 +148,8 @@ class Model():
         labels = generate_random_tags()
         mod_display = self.get_display_name(labels[0])
         bp_display = self.get_display_name(labels[1])
-        label_args = [patient_id, report_id] + labels + [mod_display, bp_display]
-
+        label_args = [self.current_patient_id, report_id] + labels + [mod_display, bp_display]
+        # label_args = [self.current_patient_ID, report_id] + labels
         self.db_connection.add_labels(label_args)
 
     def get_unique_report_paths(self, report_name, id):
@@ -157,7 +164,7 @@ class Model():
         file = open(text_path, "w+")
         file.write(result)
         file.close()
-        self.db_connection.add_report(patient_id, id, report_name.split('.')[0], file_path, text_path, "")
+        self.db_connection.add_report(self.current_patient_ID, id, report_name.split('.')[0], file_path, text_path, "")
         self.update_clinician_list()
 
     def call_nlp(self, report_id):
@@ -169,10 +176,10 @@ class Model():
         nlp_data = self.nlp_model.predict({0: text})[0]
         labels = [nlp_data['modality'], nlp_data['body_part'], nlp_data['clinic_name'],
                   nlp_data['dr_name'], nlp_data['date_of_procedure']]
-
         mod_display = self.get_display_name(labels[0])
         bp_display = self.get_display_name(labels[1])
-        label_args = [patient_id, report_id] + labels + [mod_display, bp_display]
+        label_args = [self.current_patient_id, report_id] + labels + [mod_display, bp_display]
+        # label_args = [self.current_patient_ID, report_id] + labels
         self.db_connection.add_labels(label_args)
 
     def set_filters(self, modalities, bodyparts, dates):
@@ -264,6 +271,19 @@ class Model():
             total_ids = total_ids + date_IDs
         return total_ids
 
+    def get_patient_data(self):
+        prepped_data = []
+        data = self.db_connection.get_patient_info()
+        for patient in data:
+            prepped_patient = list(patient)
+            prepped_patient[0] = str(patient[0])
+            dob = prepped_patient[4]
+            dob = dob.strftime("%Y-%m-%d")
+            prepped_patient[4] = dob
+            prepped_data.append(prepped_patient)
+
+        return prepped_data
+
     def get_reports_to_display(self, filtered_IDs=None):
         if filtered_IDs is None:
             report_IDs = self.db_connection.get_report_IDs(self.current_patient_ID)
@@ -353,7 +373,7 @@ class Model():
         display_name = self.display_names[category]
         return display_name
 
-    def update_filter_ceckmark_display_text(self, checkmarks):
+    def update_filter_checkmark_display_text(self, checkmarks):
         for dict in checkmarks:
             for key in dict.keys():
                 dict[key].setText(self.display_names[key])
@@ -469,6 +489,7 @@ class Model():
     def search(self, user_query):
 
         all_current_label_options = self.get_untupled_label_list(self.db_connection.get_all_labels())
+
         labels_searched_for, date_in_search = self.label_search_main(user_query, all_current_label_options)
         if len(labels_searched_for) == 0 and date_in_search == [[], []]:
             return []
@@ -572,6 +593,8 @@ class Model():
         return [exact_match_segments, query]
 
     def is_exact_label_match(self, query, labels):
+        thing = query.lower()
+        idk = map(str.lower, labels)
         if query.lower() in map(str.lower, labels):
             return True
         else:
@@ -580,7 +603,8 @@ class Model():
     def get_untupled_label_list(self, tupled_list):
         new_list = []
         for tuple in tupled_list:
-            new_list.append(tuple[0])
+            if tuple[0] is not None:
+                new_list.append(tuple[0])
         new_list = list(dict.fromkeys(new_list)) # remove repeated items
         return new_list
 
