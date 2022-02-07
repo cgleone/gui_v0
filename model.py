@@ -21,19 +21,23 @@ class Model():
         self.set_nlp_params()
 
         self.current_patient_ID = None
+        self.current_physician_ID = None
         self.current_filters = None
         self.current_categories = None
         self.filter_options = None
         self.date_filters = None
         self.db_functions = None
         self.current_report_IDs = None
+        self.display_names = None
 
         self.set_current_patient_ID(22)
+        self.set_current_physician_ID(1)
         self.set_filter_options()
         self.set_date_filters()
         self.current_display_data_with_IDs = None
         self.set_default_categories()
         self.set_db_functions()
+        self.set_display_names()
 
 
 
@@ -79,6 +83,9 @@ class Model():
     def set_current_patient_ID(self, ID):
         self.current_patient_ID = ID
 
+    def set_current_physician_ID(self, ID):
+        self.current_physician_ID = ID
+
     def set_filter_options(self):
         self.filter_options = {"modalities": ["X-ray", "MRI", "CT", "Ultrasound"],
                                "bodyparts": ["Head and neck", "Chest", "Abdomen", "Upper Limbs", "Lower Limbs",
@@ -98,11 +105,24 @@ class Model():
     def set_db_functions(self):
         self.db_functions = {"Exam Date": self.db_connection.get_report_date,
                              "File Name": self.db_connection.get_report_name,
-                             "Imaging Modality": self.db_connection.get_report_modality,
-                             "Body Part": self.db_connection.get_report_bodypart,
+                             "Imaging Modality": self.db_connection.get_report_modality_display,
+                             "Body Part": self.db_connection.get_report_bodypart_display,
                              "Institution": self.db_connection.get_report_institution,
                              "Clinician": self.db_connection.get_report_clinician,
                              "Notes": self.db_connection.get_report_notes}
+
+    def set_display_names(self):
+        physician_preferences = self.db_connection.get_physician_preferences(self.current_physician_ID)
+        self.display_names = {'X-ray': physician_preferences[1],
+                              'MRI': physician_preferences[2],
+                              'CT': physician_preferences[3],
+                              'Ultrasound': physician_preferences[4],
+                              'Head and Neck': physician_preferences[5],
+                              'Chest': physician_preferences[6],
+                              'Abdomen': physician_preferences[7],
+                              'Upper Limbs': physician_preferences[8],
+                              'Lower Limbs': physician_preferences[9],
+                              'Other': physician_preferences[10]}
 
     def import_report(self, path):
         filename = path.split('/')[-1]
@@ -110,8 +130,8 @@ class Model():
         shutil.copy(path, self.get_unique_report_paths(filename, id)[0])
         shutil.copy(path, 'OCR/reports_temp/'+filename)
         self.call_ocr(filename, id)
-        self.call_nlp(id)
-        #self.call_fake_nlp(id)
+        # self.call_nlp(id)
+        self.call_fake_nlp(id)
 
     def call_ocr(self, filename, id):
         report_text = ocr_main.run_ocr(filename)
@@ -119,7 +139,10 @@ class Model():
 
     def call_fake_nlp(self, report_id):
         labels = generate_random_tags()
-        label_args = [patient_id, report_id] + labels
+        mod_display = self.get_display_name(labels[0])
+        bp_display = self.get_display_name(labels[1])
+        label_args = [patient_id, report_id] + labels + [mod_display, bp_display]
+
         self.db_connection.add_labels(label_args)
 
     def get_unique_report_paths(self, report_name, id):
@@ -147,7 +170,9 @@ class Model():
         labels = [nlp_data['modality'], nlp_data['body_part'], nlp_data['clinic_name'],
                   nlp_data['dr_name'], nlp_data['date_of_procedure']]
 
-        label_args = [patient_id, report_id] + labels
+        mod_display = self.get_display_name(labels[0])
+        bp_display = self.get_display_name(labels[1])
+        label_args = [patient_id, report_id] + labels + [mod_display, bp_display]
         self.db_connection.add_labels(label_args)
 
     def set_filters(self, modalities, bodyparts, dates):
@@ -156,14 +181,16 @@ class Model():
         for key in modalities.keys():
             if modalities[key].isChecked():
                 checked_modalities.append(key)
-        active_filters = active_filters + checked_modalities
+                active_filters.append(self.display_names[key])
+        # active_filters = active_filters + checked_modalities
         checked_modalities = self.get_checked_datatype(checked_modalities, "modalities")
 
         checked_bodyparts = []
         for key in bodyparts.keys():
             if bodyparts[key].isChecked():
                 checked_bodyparts.append(key)
-        active_filters = active_filters + checked_bodyparts
+                active_filters.append(self.display_names[key])
+        # active_filters = active_filters + checked_bodyparts
         checked_bodyparts = self.get_checked_datatype(checked_bodyparts, "bodyparts")
 
         checked_dates = []
@@ -194,8 +221,8 @@ class Model():
 
     def uncheck_filter(self, filter_to_remove, filter_checkboxes):
         for i in range(len(filter_checkboxes)):
-            for key in filter_checkboxes[i].keys():
-                if key == filter_to_remove.text():
+            for key, value in filter_checkboxes[i].items():
+                if value.text() == filter_to_remove.text():
                     filter_checkboxes[i][key].setChecked(False)
 
     def get_checked_datatype(self, list, category=None):
@@ -297,6 +324,48 @@ class Model():
             category = category_list.item(i)
             if category.text() in self.current_categories:
                 category.setCheckState(Qt.Checked)
+
+    def determine_display_names(self, table):
+        rows = table.rowCount()
+        for i in range(rows):
+            category = table.verticalHeaderItem(i).text()
+            display_name = table.cellWidget(i,0).text()
+            if display_name != '':
+                self.display_names[category] = display_name
+            else:
+                self.display_names[category] = category
+            query_values = (category, self.display_names[category], self.current_physician_ID)
+            self.db_connection.update_display_name_db(query_values)
+        self.update_display_columns_db()
+
+    def update_display_columns_db(self, report_ids = None):
+        if report_ids is None:
+            report_ids = self.db_connection.get_all_report_ids()
+        for report_id in report_ids:
+            modality = self.db_connection.get_report_modality(report_id)[0][0]
+            modality_display = self.display_names[modality]
+            bodypart = self.db_connection.get_report_bodypart(report_id)[0][0]
+            bodypart_display = self.display_names[bodypart]
+            query_values = (modality_display, bodypart_display, report_id[0])
+            self.db_connection.update_label_table_display_name_column(query_values)
+
+    def get_display_name(self, category):
+        display_name = self.display_names[category]
+        return display_name
+
+    def update_filter_ceckmark_display_text(self, checkmarks):
+        for dict in checkmarks:
+            for key in dict.keys():
+                dict[key].setText(self.display_names[key])
+
+    def reset_single_display_name(self, button_pressed, display_name_group, display_names_table):
+        row = display_name_group.id(button_pressed)
+        display_names_table.cellWidget(row, 0).clear()
+
+    def reset_all_display_names(self, display_names_table):
+        for i in range(display_names_table.rowCount()):
+            display_names_table.cellWidget(i, 0).clear()
+
 
     def set_category_dict(self):
         self.category_dict = {"Modality": ["MRI", "CT", "Ultrasound", "X-ray"],

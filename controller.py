@@ -10,6 +10,7 @@ class Controller:
         self.model = model
         self.create_table_grid()
         self.create_settings_dialog()
+        self.view.populate_dialog(self.model.display_names)
         self.connect_signals()
 
 
@@ -31,6 +32,9 @@ class Controller:
         self.view.remove_filter_buttons.buttonClicked.connect(self.remove_one_filter)
         self.view.settings_button.clicked.connect(self.select_settings)
         self.view.apply_settings_button.clicked.connect(self.apply_settings)
+        self.view.clear_display_name_group.buttonClicked.connect(self.reset_single_display_name)
+        self.view.reset_display_names.clicked.connect(self.reset_all_display_names)
+
 
     def view_report(self, row, col):
         filename, isPDF, name = self.model.view_report(row, col)
@@ -118,11 +122,21 @@ class Controller:
         # determine which checkboxes are checked
         self.model.determine_checked_categories(self.view.category_list)
         self.view.create_table_columns(self.model.current_categories)
+        # determine new display names
+        self.model.determine_display_names(self.view.display_names_table)
+        self.view.populate_display_names_table(self.model.display_names)
         self.get_report_info_to_display(self.model.current_report_IDs)
         self.display_report_info()
+        self.model.update_filter_ceckmark_display_text([self.view.mod_options, self.view.bodypart_options])
         self.view.close_settings_dialog()
 
     def create_settings_dialog(self):
         self.view.create_categories()
         self.model.update_view_category_list(self.view.category_list)
-        self.view.create_settings_dialog_for_later()
+        self.view.create_settings_dialog_for_later(self.model.display_names)
+
+    def reset_single_display_name(self, button_pressed):
+        self.model.reset_single_display_name(button_pressed, self.view.clear_display_name_group, self.view.display_names_table)
+
+    def reset_all_display_names(self):
+        self.model.reset_all_display_names(self.view.display_names_table)

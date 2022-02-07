@@ -19,7 +19,7 @@ from PyQt5.QtCore import Qt, QStringListModel, QTextStream, QObject, pyqtSignal,
 
 from PyQt5.QtWidgets import QGridLayout, QLabel, QToolBar, QStatusBar, QDialog, QTableWidgetItem, QHeaderView, \
     QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox, \
-    QButtonGroup, QTreeWidget, QTreeWidgetItem, QAbstractItemView, QListWidget, QListWidgetItem
+    QButtonGroup, QTreeWidget, QTreeWidgetItem, QAbstractItemView, QListWidget, QListWidgetItem, QTabWidget
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -162,6 +162,8 @@ class View(QMainWindow):
         self.remove_filter_buttons = QButtonGroup()
         self.settings_button = QPushButton("User Preferences")
         self.apply_settings_button = QPushButton("Apply Settings")
+        self.clear_display_name_group = QButtonGroup()
+        self.reset_display_names = QPushButton("Reset All")
 
     def create_user_inputs(self):
         self.search_bar = QLineEdit()
@@ -180,15 +182,15 @@ class View(QMainWindow):
         self.dialog = QDialog()
         self.dialog.setWindowTitle("Select Filters")
         self.dialog_layout = QGridLayout()
-        self.populate_dialog()
+        # self.populate_dialog()
         self.dialog.setLayout(self.dialog_layout)
 
     def show_dialog(self):
         self.dialog.exec()
 
 
-    def populate_dialog(self):
-        self.create_filter_options()
+    def populate_dialog(self, display_names):
+        self.create_filter_options(display_names)
         self.dialog_layout.addWidget(QLabel("Imaging Modalities: "), 0, 0)
         self.dialog_layout.addWidget(QLabel("Body Parts: "), 0, 1)
         self.dialog_layout.addWidget(QLabel("Date of Exam: "), 0, 2)
@@ -209,30 +211,89 @@ class View(QMainWindow):
     def close_dialog(self):
         self.dialog.close()
 
-    def create_filter_options(self):
+    def create_filter_options(self, display_names):
 
         # modalities
-        self.mod_options = {"X-ray": QCheckBox("X-ray"), "MRI": QCheckBox("MRI"), "CT": QCheckBox("CT"),
-                            "Ultrasound": QCheckBox("Ultrasound")}
+        self.mod_options = {"X-ray": QCheckBox(display_names["X-ray"]), "MRI": QCheckBox(display_names["MRI"]),
+                            "CT": QCheckBox(display_names["CT"]), "Ultrasound": QCheckBox(display_names["Ultrasound"])}
         self.date_options = {"<6mos": QCheckBox("< 6mos"),
                                  "6mos-1yr": QCheckBox("6mos - 1yr"), "1yr-5yrs": QCheckBox("1yr - 5yrs"),
                              ">5yrs": QCheckBox("> 5 yrs")}
-        self.bodypart_options = {"Head and Neck": QCheckBox("Head and Neck"), "Chest": QCheckBox("Chest"),
-                                 "Abdomen": QCheckBox("Abdomen"), "Upper Limbs": QCheckBox("Upper Limbs"),
-                                 "Lower Limbs": QCheckBox("Lower Limbs"), "Other": QCheckBox("Other")}
+        self.bodypart_options = {"Head and Neck": QCheckBox(display_names["Head and Neck"]),
+                                 "Chest": QCheckBox(display_names["Chest"]), "Abdomen": QCheckBox("Abdomen"),
+                                 "Upper Limbs": QCheckBox(display_names["Upper Limbs"]),
+                                 "Lower Limbs": QCheckBox(display_names["Lower Limbs"]),
+                                 "Other": QCheckBox(display_names["Other"])}
 
-    def create_settings_dialog_for_later(self):
+    def create_settings_dialog_for_later(self, display_names):
         self.settings_dialog = QDialog()
         self.settings_dialog.setWindowTitle("User Preferences")
+        self.settings_dialog.setMinimumSize(500,710)
         self.settings_dialog_layout = QGridLayout()
-        self.populate_settings_dialog()
+        self.create_tabs()
+        self.populate_table_columns_tab()
+        self.populate_display_names_tab(display_names)
+        self.settings_dialog_layout.addWidget(self.user_pref_tabs)
+        self.settings_dialog_layout.addWidget(self.apply_settings_button)
         self.settings_dialog.setLayout(self.settings_dialog_layout)
 
-    def populate_settings_dialog(self):
-        self.settings_dialog_layout.addWidget(QLabel("Select Visible Categories: "), 0, 0)
-        self.settings_dialog_layout.addWidget(QLabel("(drag to reorder)"), 1, 0)
-        self.settings_dialog_layout.addWidget(self.category_list)
-        self.settings_dialog_layout.addWidget(self.apply_settings_button)
+    def create_tabs(self):
+        self.user_pref_tabs = QTabWidget()
+        self.table_colums_tab = QWidget()
+        self.display_names_tab = QWidget()
+        self.user_pref_tabs.addTab(self.table_colums_tab, "Table Columns")
+        self.user_pref_tabs.addTab(self.display_names_tab, "Display Names")
+
+    def populate_table_columns_tab(self):
+        self.table_colums_tab.layout = QVBoxLayout()
+        self.table_colums_tab.layout.addWidget(QLabel("Select Visible Categories: "))
+        self.table_colums_tab.layout.addWidget(QLabel("(drag to reorder)"))
+        self.table_colums_tab.layout.addWidget(self.category_list)
+        self.table_colums_tab.setLayout(self.table_colums_tab.layout)
+
+    def populate_display_names_tab(self, display_names):
+        self.display_names_tab.layout = QGridLayout()
+        self.create_display_name_table(display_names)
+        self.display_names_tab.layout.addWidget(QLabel("Edit Display Names:"), 1, 1, 1, 1)
+        self.display_names_tab.layout.addWidget(self.display_names_table,2,1, 1, 2)
+        self.display_names_tab.layout.addWidget(self.reset_display_names, 3, 2)
+        self.display_names_tab.setLayout(self.display_names_tab.layout)
+
+    def create_display_name_table(self, display_names):
+        self.display_names_table = QTableWidget()
+        self.display_names_table.setColumnCount(2)
+        self.display_names_table.setRowCount(len(display_names))
+        header_font = QFont()
+        header_font.setBold(True)
+        self.display_names_table.horizontalHeader().setFont(header_font)
+        self.display_names_table.setHorizontalHeaderLabels(['Display Name', ''])
+        # self.display_names_table.verticalHeader().setVisible(False)
+        self.display_names_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.display_names_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        self.display_names_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.populate_display_names_table(display_names)
+
+    def populate_display_names_table(self, display_names):
+        self.display_names_table.setVerticalHeaderLabels(display_names.keys())
+        row = 0
+        for key in display_names.keys():
+            line_edit = QLineEdit()
+            line_edit.setPlaceholderText(key)
+            if key != display_names[key]:
+                line_edit.setText(display_names[key])
+            self.display_names_table.setCellWidget(row, 0, line_edit)
+            xbutton = QPushButton("X")
+            xbutton.setMaximumSize(60,80)
+            self.display_names_table.setCellWidget(row, 1, xbutton)
+            self.clear_display_name_group.addButton(xbutton, row)
+            row = row+1
+
+    #     row_data = [key, display_names[key]]
+    #     for j in range(2):
+    #         self.display_names_table.setItem(row, j, QTableWidgetItem(row_data[j]))
+
+
+
 
     def create_categories(self):
         self.create_category_options()
@@ -255,6 +316,7 @@ class View(QMainWindow):
                               "Institution", "Clinician", "Notes"]
 
     def show_settings_dialog(self):
+        self.user_pref_tabs.setCurrentIndex(0)
         self.settings_dialog.show()
 
     def close_settings_dialog(self):

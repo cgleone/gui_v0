@@ -8,13 +8,13 @@ class DB_Connection:
         # self.db = mysql.connect(
         #     host="localhost",
         #     user="root",
-        #     passwd="#Darren89candiesEW",
+        #     passwd="#Darren89candiesEW!",
         #     database="ReportData")
 
         self.db = mysql.connect(
             host="localhost",
             user="root",
-            passwd="FYDP2022",
+            passwd="#Darren89candiesEW!",
             database="reportdata")
 
         self.cursor = self.db.cursor()
@@ -33,7 +33,7 @@ class DB_Connection:
        # return report_id
 
     def add_labels(self, info):
-        query = "INSERT INTO labels VALUES (%s, %s, %s, %s, %s, %s, %s)"
+        query = "INSERT INTO labels VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
         self.cursor.execute(query, info)
         self.db.commit()
         return
@@ -86,8 +86,18 @@ class DB_Connection:
         self.cursor.execute(query % report_ID)
         return self.cursor.fetchall()
 
+    def get_report_modality_display(self, report_ID):
+        query = "SELECT Modality_display FROM labels WHERE Report_ID='%s'"
+        self.cursor.execute(query % report_ID)
+        return self.cursor.fetchall()
+
     def get_report_bodypart(self, report_ID):
         query = "SELECT Bodypart FROM labels WHERE Report_ID='%s'"
+        self.cursor.execute(query % report_ID)
+        return self.cursor.fetchall()
+
+    def get_report_bodypart_display(self, report_ID):
+        query = "SELECT Bodypart_display FROM labels WHERE Report_ID='%s'"
         self.cursor.execute(query % report_ID)
         return self.cursor.fetchall()
 
@@ -151,6 +161,29 @@ class DB_Connection:
     def get_all_clinicians(self):
         self.cursor.execute("SELECT Clinician FROM labels")
         return self.cursor.fetchall()
+
+    def get_physician_preferences(self, id):
+        query = "SELECT * FROM physician_preferences WHERE physician_id = %s"
+        self.cursor.execute(query % id)
+        preferences = self.cursor.fetchall()
+        return preferences[0]
+
+    def update_display_name_db(self, values):
+        query = "UPDATE physician_preferences SET `%s` = '%s' WHERE physician_id = '%s'"
+        self.cursor.execute(query % values)
+        self.db.commit()
+
+    def get_all_report_ids(self):
+        query = "SELECT Report_ID FROM reports"
+        self.cursor.execute(query)
+        ids = self.cursor.fetchall()
+        return ids
+
+    def update_label_table_display_name_column(self, values):
+        query = "UPDATE labels SET Modality_display = '%s', Bodypart_display = '%s' WHERE report_ID = '%s'"
+        self.cursor.execute(query % values)
+        self.db.commit()
+
 
 
 # test_db = DB_Connection()
