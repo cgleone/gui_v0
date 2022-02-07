@@ -1,5 +1,6 @@
 from models.minimal_model import ModelApi
 
+
 class TrainingModel(ModelApi):
     """
     Generic class for model training
@@ -8,7 +9,7 @@ class TrainingModel(ModelApi):
     def __init__(self):
         super().__init__()
         self.metrics = {}
-    
+
     def preprocess(self, data_snapshot):
         """Transform data snapshot into training data"""
         # Text
@@ -19,7 +20,7 @@ class TrainingModel(ModelApi):
             # Labels need to be saved with the same key as the text chunks
         # Save all these into a dataframe
         pass
-    
+
     def train(self, training_data):
         """Train model on training data and records training metrics"""
         # Transform dataframe into pytorch datasets for training and validation
