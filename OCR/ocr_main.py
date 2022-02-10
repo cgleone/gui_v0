@@ -71,9 +71,13 @@ def prep_image(file):
         if len(jpg_list) == 1:
             jpg_path = jpg_list
             if '\\' in jpg_path[0]:
-                thingy =jpg_path.split('\\\\')
-                thingy2 = thingy[-1]
-                return thingy2
+                # print(jpg_path[0])
+                # print('\\' in r"%r" % jpg_path)
+                # print(repr(jpg_path[0].find('\\')))
+                # thingy =jpg_path[0].split('\\')
+                # thingy2 = thingy[-1]
+                test = jpg_path[0].split('\\')[-1]
+                return [test]
             else:
                 return jpg_path.split('/')[-1]
 

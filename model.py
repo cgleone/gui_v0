@@ -148,7 +148,7 @@ class Model():
         labels = generate_random_tags()
         mod_display = self.get_display_name(labels[0])
         bp_display = self.get_display_name(labels[1])
-        label_args = [self.current_patient_id, report_id] + labels + [mod_display, bp_display]
+        label_args = [self.current_patient_ID, report_id] + labels + [mod_display, bp_display]
         # label_args = [self.current_patient_ID, report_id] + labels
         self.db_connection.add_labels(label_args)
 
@@ -178,7 +178,7 @@ class Model():
                   nlp_data['dr_name'], nlp_data['date_of_procedure']]
         mod_display = self.get_display_name(labels[0])
         bp_display = self.get_display_name(labels[1])
-        label_args = [self.current_patient_id, report_id] + labels + [mod_display, bp_display]
+        label_args = [self.current_patient_ID, report_id] + labels + [mod_display, bp_display]
         # label_args = [self.current_patient_ID, report_id] + labels
         self.db_connection.add_labels(label_args)
 
