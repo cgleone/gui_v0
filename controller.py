@@ -34,7 +34,9 @@ class Controller:
         self.view.report_screen.apply_settings_button.clicked.connect(self.apply_settings)
         self.view.report_screen.back_button.clicked.connect(self.patient_select_screen)
         self.view.report_screen.main_menu_button.clicked.connect(self.view.go_to_home)
-        self.view.report_screen.clear_display_name_group.buttonClicked.connect(self.reset_single_display_name)
+        self.view.report_screen.clear_modality_display_group.buttonClicked.connect(self.reset_single_modality_display_name)
+        self.view.report_screen.clear_bodypart_display_group.buttonClicked.connect(self.reset_single_bodypart_display_name)
+        self.view.report_screen.clear_institution_display_group.buttonClicked.connect(self.reset_single_institution_display_name)
         self.view.report_screen.reset_display_names.clicked.connect(self.reset_all_display_names)
 
         self.view.home.select_button.clicked.connect(self.patient_select_screen)
@@ -89,12 +91,15 @@ class Controller:
         self.view.report_screen.show_dialog()
 
     def apply_filters(self):
+        self.update_filters_dialog()
+        self.get_filtered_reports()
+        self.view.report_screen.close_dialog()
+
+    def update_filters_dialog(self):
         active_filters = self.model.set_filters(self.view.report_screen.mod_options,
                                                 self.view.report_screen.bodypart_options,
                                                 self.view.report_screen.date_options)
         self.populate_filter_layout(active_filters)
-        self.get_filtered_reports()
-        self.view.report_screen.close_dialog()
 
     def populate_filter_layout(self, active_filters):
         self.model.clear_layout(self.view.report_screen.filters_layout)
@@ -143,33 +148,71 @@ class Controller:
         self.view.report_screen.create_table_grid(current_categories)
 
     def select_settings(self):
+        self.update_display_tabs_tables()
         self.view.report_screen.show_settings_dialog()
 
     def apply_settings(self):
         # determine which checkboxes are checked
-        self.model.determine_checked_categories(self.view.report_screen.category_list)
-        self.view.report_screen.create_table_columns(self.model.current_categories)
+        self.apply_table_column_customizations()
         # determine new display names
-        self.model.determine_display_names(self.view.report_screen.display_names_table)
-        self.view.report_screen.populate_display_names_table(self.model.display_names)
+        self.update_display_name_dictionaries()
+        #update main report table
         self.get_report_info_to_display(self.model.current_report_IDs)
         self.display_report_info()
+        # update filter checkmark text
         self.model.update_filter_checkmark_display_text([self.view.report_screen.mod_options, self.view.report_screen.bodypart_options])
+        # update active filters buttons
+        self.update_filters_dialog()
         self.view.report_screen.close_settings_dialog()
+
+    def apply_table_column_customizations(self):
+        self.model.determine_checked_categories(self.view.report_screen.category_list)
+        self.view.report_screen.create_table_columns(self.model.current_categories)
+
+    def update_display_name_dictionaries(self):
+        self.model.determine_display_names(self.view.report_screen.modality_display_table,
+                                           self.model.modality_display_names)
+        self.model.determine_display_names(self.view.report_screen.bodypart_display_table,
+                                           self.model.bodypart_display_names)
+        self.model.determine_institution_display_names(self.view.report_screen.institutions_display_table)
+
+    def update_display_tabs_tables(self):
+        self.view.report_screen.populate_display_names_table(self.view.report_screen.modality_display_table,
+                                                             self.model.modality_display_names,
+                                                             self.view.report_screen.clear_modality_display_group)
+        self.view.report_screen.populate_display_names_table(self.view.report_screen.bodypart_display_table,
+                                                             self.model.bodypart_display_names,
+                                                             self.view.report_screen.clear_bodypart_display_group)
+        self.view.report_screen.populate_display_names_table(self.view.report_screen.institutions_display_table,
+                                                             self.model.current_institutions,
+                                                             self.view.report_screen.clear_institution_display_group)
 
     def create_settings_dialog(self):
         self.view.report_screen.create_categories()
         self.model.update_view_category_list(self.view.report_screen.category_list)
-        self.view.report_screen.create_settings_dialog_for_later(self.model.display_names)
+        self.view.report_screen.create_settings_dialog_for_later()
+        self.view.report_screen.populate_table_columns_tab()
+        self.view.report_screen.create_display_name_tables(self.model.modality_display_names,
+                                                           self.model.bodypart_display_names,
+                                                           self.model.current_institutions)
+        self.view.report_screen.create_displaynames_tabs()
+        self.view.report_screen.populate_display_names_tabs()
 
-    def reset_single_display_name(self, button_pressed):
-        self.model.reset_single_display_name(button_pressed, self.view.report_screen.clear_display_name_group, self.view.report_screen.display_names_table)
+    def reset_single_modality_display_name(self, button_pressed):
+        self.model.reset_single_display_name(button_pressed,
+                                             self.view.report_screen.clear_modality_display_group,
+                                             self.view.report_screen.modality_display_table)
+
+    def reset_single_bodypart_display_name(self, button_pressed):
+        self.model.reset_single_display_name(button_pressed,
+                                             self.view.report_screen.clear_bodypart_display_group,
+                                             self.view.report_screen.bodypart_display_table)
+
+    def reset_single_institution_display_name(self, button_pressed):
+        self.model.reset_single_display_name(button_pressed,
+                                             self.view.report_screen.clear_institution_display_group,
+                                             self.view.report_screen.institutions_display_table)
 
     def reset_all_display_names(self):
         self.model.reset_all_display_names(self.view.report_screen.display_names_table)
-        self.model.determine_checked_categories(self.view.report_screen.category_list)
-        self.view.report_screen.create_table_columns(self.model.current_categories)
-        self.get_report_info_to_display(self.model.current_report_IDs)
-        self.display_report_info()
-        self.view.report_screen.close_settings_dialog()
 

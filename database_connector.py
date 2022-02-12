@@ -33,7 +33,7 @@ class DB_Connection:
        # return report_id
 
     def add_labels(self, info):
-        query = "INSERT INTO labels VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        query = "INSERT INTO labels VALUES (%s, %s, %s, %s, %s, %s, %s)"
         self.cursor.execute(query, info)
         self.db.commit()
         return
@@ -86,9 +86,9 @@ class DB_Connection:
         self.cursor.execute(query % report_ID)
         return self.cursor.fetchall()
 
-    def get_report_modality_display(self, report_ID):
-        query = "SELECT Modality_display FROM labels WHERE Report_ID='%s'"
-        self.cursor.execute(query % report_ID)
+    def get_report_modality_display(self, values):
+        query = "SELECT %s FROM physician_preferences WHERE physician_id='%s'"
+        self.cursor.execute(query % values)
         return self.cursor.fetchall()
 
     def get_report_bodypart(self, report_ID):
@@ -177,6 +177,19 @@ class DB_Connection:
         self.cursor.execute(query % values)
         self.db.commit()
 
+    def update_institution_display_name_db(self, display_name, institution_id):
+        query = "UPDATE institutions SET display_name = \"{}\" WHERE id_institutions = {}".format(display_name, institution_id)
+        self.cursor.execute(query)
+        self.db.commit()
+
+    def get_id_institutions(self, physician_id, formal_name):
+        # query = "SELECT id_institutions FROM institutions WHERE physician_id = %s and formal_name = \"%s\""
+        query = "SELECT id_institutions FROM institutions WHERE physician_id = {} and formal_name = \"{}\"".format(physician_id, formal_name)
+        print(query)
+        # self.cursor.execute(query % values)
+        self.cursor.execute(query)
+        return self.cursor.fetchall()
+
     def get_all_report_ids(self):
         query = "SELECT Report_ID FROM reports"
         self.cursor.execute(query)
@@ -197,6 +210,16 @@ class DB_Connection:
         query = "SELECT First_name FROM patients WHERE patient_ID='%s'"
         self.cursor.execute(query % patient_ID)
         return self.cursor.fetchall()
+
+    def get_institutions_in_db(self, physician_ID):
+        query = "SELECT formal_name, display_name FROM institutions WHERE physician_id = %s"
+        self.cursor.execute(query % physician_ID)
+        return self.cursor.fetchall()
+
+    def add_institution(self, institution, physician_ID):
+        query = "INSERT INTO institutions (physician_id, formal_name, display_name) VALUES({}, \"{}\", \"{}\")".format(physician_ID, institution, institution)
+        self.cursor.execute(query)
+        self.db.commit()
 
 
 
