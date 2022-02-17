@@ -1,12 +1,13 @@
 from collections import UserDict
-import warnings
-import itertools
-import pandas as pd
 import glob
 import re
 import pickle
 import json
 import uuid
+import warnings
+import itertools
+import pandas as pd
+import numpy as np
 
 
 class Document(UserDict):
@@ -188,3 +189,291 @@ def qa_preprocess(snapshot, json_save_path):
 
     with open(json_save_path, 'w') as f:
         json.dump(train_squad_data, f)
+
+
+def text_split_preprocess(snapshot, tokenizer, max_seq_len=512, stride=10):
+    """Preprocessing transforms a snapshot datastructure with documents into a dataframe with ['text', 'label', 'id']
+    These dicts can be later transformed into a pandas dataframe with all the training data.
+
+    We split long texts into batches of tokens of max sequence length and use stride to prepend a number of tokens from
+    the preceding sequence. Note that there will not be the exact number stride of tokens prepended as this method tries
+    to ensure that we don't split on partial word pieces.
+
+    Parameters
+    ----------
+    snapshot : dict of Document
+        datastructure containing documents with texts and labels
+    tokenizer : transformers.Tokenizer
+        Tokenizer associated with intended model
+    max_seq_len : int
+        Maximum token sequence length for transformers model
+    stride : int
+        When splitting into phrases of max sequence length, how many tokens from previous sequence to prepend
+
+    Returns
+    -------
+    training_data : pd.DataFrame
+        DataFrame with columns ['text', 'label', 'id']
+    """
+    # Iterate through snapshot split texts
+    output = []
+    for _id, document in snapshot.items():
+        text = document.text
+
+        # Encode entire text with max_length=None
+        encoding = tokenizer(
+            text,
+            return_offsets_mapping=True,
+            padding='max_length',
+            truncation=True,
+            max_length=None,
+            return_overflowing_tokens=True)
+
+        tokens = tokenizer.convert_ids_to_tokens(encoding['input_ids'][0])
+        offsets = encoding['offset_mapping'][0]
+
+        # Split text by max_seq_len
+        chunk_size = max_seq_len - 2  # For [CLS] and [SEP]
+
+        # First chunk
+        start = 1  # Because 0th token is [CLS]
+        end = min(start + chunk_size, len(tokens) - 1)
+        # Move end forward to token that is not middle of word piece.
+        while tokens[end].startswith('##'):
+            end -= 1
+
+        temp = []
+        # Add chunks to temp
+        while end < len(tokens) - 1:
+            # Indices for sections of text
+            start_idx = offsets[start][0]
+            end_idx = offsets[end][0]
+            # If you need to do labelling, do it here and add the label key when appending to temp
+            temp.append({'text': text[start_idx:end_idx]})
+
+            # Move start to beginning of word piece
+            start = end - stride
+            while tokens[start].startswith('##'):
+                start -= 1
+            # Don't let end go to a bad index
+            end = min(end + chunk_size, len(tokens) - 1)
+            # Move end forward
+            while tokens[end].startswith('##') or (end - start > chunk_size):
+                end -= 1
+        # Last chunk
+        start_idx = offsets[start][0]
+        end_idx = offsets[-2][1]  # -1 token/offset is [SEP]
+        # Do labelling here too
+        temp.append({'text': text[start_idx:end_idx]})
+
+        # Add temp items to output, remake id to include enumeration of the chunk
+        for i, d in enumerate(temp):
+            d['id'] = _id + ':' + str(i)
+        output.extend(temp)
+
+    training_data = pd.DataFrame(output)
+    return training_data
+
+
+def get_iob_entity_encoding(entity_labels):
+    """Creates IOB entity encoding from entity labels dictionary
+    'O' is always 0, 'X' is -100, which is PyTorch default ignore value for loss/accuracy calculations
+
+    Parameters
+    ----------
+    entity_labels : dict
+        keys same as label keys, values of IOB label
+        E.g. {'Modality': 'MOD'}
+
+    Returns
+    -------
+    entity_encoding : dict
+        keys are the IOB tags, values are integer encodings
+        E.g. {'O': 0, 'B-MOD': 1, 'I-MOD': 2}
+    """
+    entity_encoding = {'-'.join([io, label]): i
+                       for i, (label, io) in
+                       enumerate(itertools.product(sorted(entity_labels.values()), ['B', 'I']), start=1)}
+    entity_encoding['O'] = 0
+    entity_encoding['X'] = -100  # The default no prediction for pytorch softmax
+    return entity_encoding
+
+
+def label_encoded_tokens(encoding, entity_spans, tokenizer, entity_encoding):
+    """Generate labels for the tokens given the spans where entities exist within the text by matching
+    the positions of the tokens to the spans
+
+    Encoding should be generated with return_offset_mapping=True, truncation=True, return_overflowing_tokens=True
+    so that encoding['input_ids'] and encoding['offset_mapping'] are list of lists.
+
+    Parameters
+    ----------
+    encoding : dict
+        output dict of transformers tokenizer with keys for ['input_ids', 'offset_mapping']
+    entity_spans : list of tuples
+        list of tuples of ((start, end), entity_type), sorted by start
+    tokenizer : transformers.tokenizer
+        Tokenizer used to generate the encoding
+    entity_encoding: dict
+        mapping of IOB tags to integer encoding
+
+    Returns
+    -------
+    encoded_labels: list
+        list of np.ndarray of integer token labels
+    """
+    encoded_labels = []
+    for encoded_tokens, offsets in zip(encoding['input_ids'], encoding['offset_mapping']):
+        # Get actual tokens
+        tokens = tokenizer.convert_ids_to_tokens(encoded_tokens)
+
+        # Most tokens will be 'O'
+        cls_labels = ['O'] * len(tokens)
+
+        # Prepare to iterate through entities
+        iter_spans = iter(entity_spans)
+        span, token_type = next(iter_spans)
+
+        # Iterate through tokens and label
+        for i, (token, offset) in enumerate(zip(tokens, offsets)):
+            # [CLS] and [SEP] tokens have offset (0, 0) and we label as 'X'
+            if offset == (0, 0):
+                cls_labels[i] = 'X'
+                continue
+
+            # Passed end of entity, get next one
+            if offset[0] > span[1]:
+                try:
+                    span, token_type = next(iter_spans)
+                except StopIteration:
+                    break  # No more relevant tokens to tag
+
+            # Assign 'X' to subtokens split by the WordPiece algorithm
+            if token.startswith('##'):
+                cls_labels[i] = 'X'
+            # Beginning token, assign 'B'
+            elif offset[0] == span[0]:
+                cls_labels[i] = 'B-' + token_type
+            # Inside token, assign 'I
+            elif offset[0] >= span[0] and offset[1] <= span[1]:
+                cls_labels[i] = 'I-' + token_type
+
+        # Construct the label encoding for training
+        encoded_labels.append(np.array([entity_encoding[ent] for ent in cls_labels], dtype=int))
+    return encoded_labels
+
+
+def ner_preprocess(snapshot, tokenizer, entity_labels, max_seq_len=512, stride=10):
+    """Preprocessing transforms a snapshot datastructure with documents into a dataframe with ['text', 'label', 'id']
+    These dicts can be later transformed into a pandas dataframe with all the training data.
+
+    NER training labels are a vector of encoded labels corresponding to the IOB entity tagging scheme for that token.
+    This is accomplished by using regex to search for the positions in the text where the entity occurs.
+    The tokens within those position ranges are then assigned the appropriate encoding.
+    Preditions are only generate for the first token. Partial tokens from the WordPiece algorithm are not predicted on.
+    We split long texts into batches of tokens of max sequence length and use stride to prepend a number of tokens from
+    the preceding sequence. Note that there will not be the exact number stride of tokens prepended as this method tries
+    to ensure that we don't split on partial word pieces.
+
+    Parameters
+    ----------
+    snapshot : dict of Document
+        datastructure containing documents with texts and labels
+    tokenizer : transformers.Tokenizer
+        Tokenizer associated with intended model
+    entity_labels : dict
+        Mapping of label keys to entity names (e.g. {'Modality': 'MOD'})
+    max_seq_len : int
+        Maximum token sequence length for transformers model
+    stride : int
+        When splitting into phrases of max sequence length, how many tokens from previous sequence to prepend
+
+    Returns
+    -------
+    training_data : pd.DataFrame
+        DataFrame with columns ['text', 'label', 'id']
+    """
+    # Create entity encoding map from IOB labels to integers
+    entity_encoding = get_iob_entity_encoding(entity_labels)
+
+    # Iterate through snapshot and tag data
+    output = []
+    for _id, document in snapshot.items():
+        text = document.text
+
+        # Make labels on un-split text with max_length=None
+        encoding = tokenizer(
+            text,
+            return_offsets_mapping=True,
+            padding='max_length',
+            truncation=True,
+            max_length=None,
+            return_overflowing_tokens=True)
+
+        # Find entities
+        entity_spans = []
+        for label_type, token_type in entity_labels.items():
+            label_data = document.get(label_type, None)
+            if label_data is None:
+                continue
+            word = label_data['true text']
+            # Search for the word in the text
+            for match in re.finditer(word, text):
+                entity_spans.append((match.span(), token_type))
+        if not entity_spans:
+            warnings.warn(UserWarning(f'No entities found in this text: {_id}'))
+            continue
+        # Sort by start position of entity
+        entity_spans.sort(key=lambda x: x[0][0])
+
+        # Do labelling of entire text
+        encoded_labels = label_encoded_tokens(encoding, entity_spans, tokenizer, entity_encoding)[0]
+        tokens = tokenizer.convert_ids_to_tokens(encoding['input_ids'][0])
+        offsets = encoding['offset_mapping'][0]
+
+        # Split text by max_seq_len
+        chunk_size = max_seq_len - 2  # For [CLS] and [SEP]
+
+        # First chunk
+        start = 1  # Because 0th token is [CLS]
+        end = min(start + chunk_size, len(tokens) - 1)
+        # Move end forward to token that is not middle of word piece.
+        while tokens[end].startswith('##'):
+            end -= 1
+
+        temp = []
+        # Add chunks to temp
+        while end < len(tokens) - 1:
+            # Indices for sections of text
+            start_idx = offsets[start][0]
+            end_idx = offsets[end][0]
+            # Remake labels to be of max_seq_len
+            label = -100 * np.ones(max_seq_len, dtype='int')
+            for i, val in enumerate(encoded_labels[start:end], start=1):  # Start at 1, first token is [CLS]
+                label[i] = val
+            temp.append({'text': text[start_idx:end_idx], 'label': label})
+
+            # Move start to beginning of word piece
+            start = end - stride
+            while tokens[start].startswith('##'):
+                start -= 1
+            # Don't let end go to a bad index
+            end = min(end + chunk_size, len(tokens) - 1)
+            # Move end forward
+            while tokens[end].startswith('##') or (end - start > chunk_size):
+                end -= 1
+        # Last chunk
+        start_idx = offsets[start][0]
+        end_idx = offsets[-2][1]  # -1 token/offset is [SEP]
+        label = -100 * np.ones(max_seq_len, dtype='int')
+        for i, val in enumerate(encoded_labels[start:-1], start=1):
+            label[i] = val
+        temp.append({'text': text[start_idx:end_idx], 'label': label})
+
+        # Add temp items to output, remake id to include enumeration of the chunk
+        for i, d in enumerate(temp):
+            d['id'] = _id + ':' + str(i)
+        output.extend(temp)
+
+    training_data = pd.DataFrame(output)
+    return training_data
