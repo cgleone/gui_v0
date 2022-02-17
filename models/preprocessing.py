@@ -275,6 +275,15 @@ def text_split_preprocess(snapshot, tokenizer, max_seq_len=512, stride=10):
     return training_data
 
 
+entity_labels = {
+    'Doctor Name': 'DRN',
+    'Body Part': 'BOP',
+    'Date Taken': 'DOP',
+    'Clinic Name': 'IMC',
+    'Modality': 'MOD'
+}
+
+
 def get_iob_entity_encoding(entity_labels):
     """Creates IOB entity encoding from entity labels dictionary
     'O' is always 0, 'X' is -100, which is PyTorch default ignore value for loss/accuracy calculations
