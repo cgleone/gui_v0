@@ -418,7 +418,8 @@ def ner_preprocess(snapshot, tokenizer, entity_labels, max_seq_len=512, stride=1
                 continue
             word = label_data['true text']
             # Search for the word in the text
-            for match in re.finditer(word, text):
+            flags = re.I if label_type == 'Clinic Name' else 0  # Ignore case when searching for clinic name
+            for match in re.finditer(word, text, flags=flags):
                 entity_spans.append((match.span(), token_type))
         if not entity_spans:
             warnings.warn(UserWarning(f'No entities found in this text: {_id}'))
