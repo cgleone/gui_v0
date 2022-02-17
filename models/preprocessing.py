@@ -1,4 +1,7 @@
 from collections import UserDict
+import warnings
+import itertools
+import pandas as pd
 import glob
 import re
 import pickle
@@ -118,9 +121,9 @@ def clean_text(text):
 
 def qa_preprocess(snapshot, json_save_path):
     """
-    Creates SQuAD formatted training data from a given snapshot. Finds true text in the contents of the reports and saves
-    the SQuAD format QA pairs into a JSON file.
-    
+    Creates SQuAD formatted training data from a given snapshot. Finds true text in the contents of the reports and
+    saves the SQuAD format QA pairs into a JSON file.
+
     Parameters
     ----------
     snapshot : dict of Documents
@@ -130,12 +133,13 @@ def qa_preprocess(snapshot, json_save_path):
 
     """
 
-    questions = {'dr':"What is the doctor's name?",
-                'date_taken': "What date was it taken on?",
-                'clinic':"What is the name of the clinic?",
-                'body_part': "What is the body part?",
-                'modality': "What is the imaging modality?"
-    }
+    questions = {
+        'dr': "What is the doctor's name?",
+        'date_taken': "What date was it taken on?",
+        'clinic': "What is the name of the clinic?",
+        'body_part': "What is the body part?",
+        'modality': "What is the imaging modality?"}
+
     squad = []
 
     for key, doc in snapshot.items():
@@ -144,27 +148,27 @@ def qa_preprocess(snapshot, json_save_path):
         temp = {"title": key, "paragraphs": []}
         qas = []
         for q, (label_type, labels) in zip(questions, relevant_labels.items()):
-            
+
             if labels is not None:
                 ans_text = labels['true text']
-            else: 
+            else:
                 break
             qa = {
                 'answers': [
                     {
-                    'answer_start': doc['text'].find(ans_text),
-                    'text': ans_text
+                        'answer_start': doc['text'].find(ans_text),
+                        'text': ans_text
                     }
                 ],
                 'question': questions[q],
-                'id':str(uuid.uuid4()),
+                'id': str(uuid.uuid4()),
             }
             qas.append(qa)
         temp['paragraphs'] = [{
             'context': doc['text'],
             'qas': qas
         }]
-        
+
         squad.append(temp)
 
     train_squad = []
@@ -177,7 +181,7 @@ def qa_preprocess(snapshot, json_save_path):
                     keep = False
         if keep:
             train_squad.append(item)
-        else: 
+        else:
             exclude_keys.append(item['title'])
 
     train_squad_data = {'data': train_squad}
