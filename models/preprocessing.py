@@ -120,72 +120,96 @@ def clean_text(text):
     return mask.sub('[MASK]', text)
 
 
-def qa_preprocess(snapshot, json_save_path):
+def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path):
     """
-    Creates SQuAD formatted training data from a given snapshot. Finds true text in the contents of the reports and
-    saves the SQuAD format QA pairs into a JSON file.
-
+    Creates SQuAD formatted training data from a given snapshot. First it splits the documents by token lenghth, and then 
+    finds the true text in the contents of the reports and saves the SQuAD format QA pairs into a JSON file.
+    
     Parameters
     ----------
     snapshot : dict of Documents
         Data to be used for training
+    tokenizer: transformers.Tokenizer
+        Tokenizer associated with intended model
+    max_seq_len: int
+        Maximum token sequence length for transformers model
     json_save_path: str
         Path that the JSON file will be saved to
 
     """
-
-    questions = {
-        'dr': "What is the doctor's name?",
-        'date_taken': "What date was it taken on?",
-        'clinic': "What is the name of the clinic?",
-        'body_part': "What is the body part?",
-        'modality': "What is the imaging modality?"}
-
+    questions = {'dr':"What is the doctor's name?",
+                'date_taken': "What date was it taken on?",
+                'clinic':"What is the name of the clinic?",
+                'body_part': "What is the body part?",
+                'modality': "What is the imaging modality?"
+    }
+    
     squad = []
+    training_data = text_split_preprocess(snapshot, tokenizer, max_seq_len=max_seq_len)
+    
+    training_data['id_search'] = training_data['id']
 
+    for index, row in training_data.iterrows():
+        searchId = row['id']
+        searchId = searchId[0:-2]
+        training_data['id_search'][index] = searchId
+        
     for key, doc in snapshot.items():
         relevant_labels = doc.get_labels_to_classify()
 
-        temp = {"title": key, "paragraphs": []}
-        qas = []
-        for q, (label_type, labels) in zip(questions, relevant_labels.items()):
+        relevant_training = training_data.loc[training_data['id_search'] == key]
 
-            if labels is not None:
-                ans_text = labels['true text']
-            else:
-                break
-            qa = {
-                'answers': [
-                    {
-                        'answer_start': doc['text'].find(ans_text),
-                        'text': ans_text
+        for idx, row in relevant_training.iterrows():
+
+            temp = {"title": row['id'], "paragraphs": []}
+            qas = []
+
+            for q, (label_type, labels) in zip(questions, relevant_labels.items()):
+                
+                if labels is not None:
+
+                    ans_text = labels['true text']
+                else: 
+                    break
+                
+                offset = row['text'].find(ans_text)
+                
+                if offset != -1:
+                    qa = {
+                        'answers': [
+                            {
+                            'answer_start': offset,
+                            'text': ans_text
+                            }
+                        ],
+                        'question': questions[q],
+                        'id':str(uuid.uuid4()),
+                        'is_impossible': False
                     }
-                ],
-                'question': questions[q],
-                'id': str(uuid.uuid4()),
-            }
-            qas.append(qa)
-        temp['paragraphs'] = [{
-            'context': doc['text'],
-            'qas': qas
-        }]
 
+                else:
+                    qa = {
+                        'answers': [
+                            {
+                            'answer_start': offset,
+                            'text': ans_text
+                            }
+                        ],
+                        'question': questions[q],
+                        'id':str(uuid.uuid4()),
+                        'is_impossible': True
+                    }
+                
+                qas.append(qa)
+
+            temp['paragraphs'] = [{
+                'context': row['text'],
+                'qas': qas
+            }]
+        
         squad.append(temp)
 
-    train_squad = []
-    exclude_keys = []
-    for item in squad:
-        keep = True
-        for qa in item['paragraphs'][0]['qas']:
-            for answers in qa['answers']:
-                if answers['answer_start'] == -1:
-                    keep = False
-        if keep:
-            train_squad.append(item)
-        else:
-            exclude_keys.append(item['title'])
-
-    train_squad_data = {'data': train_squad}
+    train_squad_data = {'data': squad}
 
     with open(json_save_path, 'w') as f:
         json.dump(train_squad_data, f)
@@ -213,7 +237,7 @@ def text_split_preprocess(snapshot, tokenizer, max_seq_len=512, stride=10):
     Returns
     -------
     training_data : pd.DataFrame
-        DataFrame with columns ['text', 'label', 'id']
+        DataFrame with columns ['text', 'id']
     """
     # Iterate through snapshot split texts
     output = []
