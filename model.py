@@ -442,6 +442,10 @@ class Model():
         for i in range(display_names_table.rowCount()):
             display_names_table.cellWidget(i, 0).clear()
 
+    def clear_searchbar(self, searchbar):
+        searchbar.clear()
+
+
 
     def set_category_dict(self):
         self.category_dict = {"Modality": ["MRI", "CT", "Ultrasound", "X-ray"],
@@ -548,7 +552,7 @@ class Model():
 
         labels_searched_for, date_in_search = self.label_search_main(user_query, all_current_label_options)
         if len(labels_searched_for) == 0 and date_in_search == [[], []]:
-            return []
+            return [[], []]
         elif len(labels_searched_for) > 0:
             print("labels searched for: {}".format(labels_searched_for))
             labels_with_types = self.assign_label_type(labels_searched_for)
@@ -558,11 +562,11 @@ class Model():
                 final_ids = self.search_by_date(ids_from_labels, date_in_search[0], date_in_search[1])
             else:
                 final_ids = ids_from_labels
-            return final_ids
+            return [final_ids, labels_searched_for]
         else:
             all_ids = self.db_connection.get_report_IDs(self.current_patient_ID)
             final_ids = self.search_by_date(all_ids, date_in_search[0], date_in_search[1])
-            return final_ids
+            return [final_ids, []]
        # ids = self.apply_search_labels(desired_institutions)
 
 
@@ -722,6 +726,15 @@ class Model():
     def read_csv(self):
         self.all_institutions = pd.read_csv('institution_list.csv')
        # print(self.all_institutions)
+
+    def link_search_and_filters(self, labels, checkmark_categories):
+        if labels != []:
+            for category in checkmark_categories:
+                for checkmark in category.items():
+                    for label in labels:
+                        if label == checkmark[0].casefold():
+                            checkmark[1].setChecked(True)
+
 
 
 

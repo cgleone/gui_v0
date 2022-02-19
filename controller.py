@@ -69,9 +69,14 @@ class Controller:
 
     def begin_search(self):
         user_query = self.view.report_screen.search_bar.text()
-        report_IDs = self.model.search(user_query)
-        self.get_report_info_to_display(report_IDs)
-        self.display_report_info()
+        if user_query == "":
+            self.clear_filters()
+        else:
+            report_IDs, searched_labels = self.model.search(user_query)
+            self.model.link_search_and_filters(searched_labels, [self.view.report_screen.mod_options, self.view.report_screen.bodypart_options])
+            self.populate_filter_layout(searched_labels)
+            self.get_report_info_to_display(report_IDs)
+            self.display_report_info()
 
     def import_file(self):
         self.view.report_screen.show_directory()
@@ -81,6 +86,7 @@ class Controller:
             # start a thread
             import_file_thread = self.view.report_screen.create_thread(self)
             import_file_thread.finished.connect(self.display_report_info)
+            import_file_thread.finished.connect(self.reset_report_table)
             import_file_thread.start()
 
     def thread_interior(self):
@@ -94,6 +100,7 @@ class Controller:
         self.update_filters_dialog()
         self.get_filtered_reports()
         self.view.report_screen.close_dialog()
+        self.model.clear_searchbar(self.view.report_screen.search_bar)
 
     def update_filters_dialog(self):
         active_filters = self.model.set_filters(self.view.report_screen.mod_options,
@@ -117,6 +124,7 @@ class Controller:
         self.model.reset_filter_checkboxes([self.view.report_screen.mod_options,
                                             self.view.report_screen.bodypart_options,
                                             self.view.report_screen.date_options])
+        self.model.clear_searchbar(self.view.report_screen.search_bar)
         self.initial_reports_display()
 
     def clear_dialog_filters(self):
@@ -135,6 +143,10 @@ class Controller:
         self.display_report_info()
 
     def get_report_info_to_display(self, ids=None):
+        if ids == []:
+            self.view.report_screen.no_results.setHidden(False)
+        else:
+            self.view.report_screen.no_results.setHidden(True)
         self.reports = self.model.get_reports_to_display(ids)
         self.rows = len(self.reports)
 
@@ -215,4 +227,7 @@ class Controller:
 
     def reset_all_display_names(self):
         self.model.reset_all_display_names(self.view.report_screen.display_names_table)
+
+    def reset_report_table(self):
+        self.clear_filters()
 

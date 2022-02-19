@@ -16,6 +16,8 @@ class ReportScreen(QWidget):
 
         self.patient_name = "Default"
         self.patient_label = QLabel("Patient: Default")
+        self.no_results = QLabel("No reports to show")
+        self.no_results.setHidden(True)
 
         self.create_buttons()
         self.create_user_inputs()
@@ -42,6 +44,7 @@ class ReportScreen(QWidget):
         self.vertical_main.addLayout(self.settings_layout)
         self.vertical_main.addLayout(self.search_layout)
         self.vertical_main.addLayout(self.filters_layout)
+        self.vertical_main.addWidget(self.no_results)
         self.vertical_main.addLayout(self.table_grid)
 
     def create_table_grid(self, current_categories):
@@ -122,13 +125,13 @@ class ReportScreen(QWidget):
         self.settings_layout.addWidget(self.settings_button)
 
     def create_buttons(self):
-        self.filter_button = QPushButton("Filters")
+        self.filter_button = QPushButton("Quick Search")
         self.import_button = QPushButton("Import File")
         self.go_button = QPushButton("Go")
         self.dialog_button = QPushButton("Apply Filters")
         self.back_button = QPushButton("Select A Different Patient")
         self.main_menu_button = QPushButton("Back to Main Menu")
-        self.clear_filters_button = QPushButton("Clear Active Filters")
+        self.clear_filters_button = QPushButton("Clear Search")
         self.dialog_clear_filters_button = QPushButton("Clear Filters")
         self.remove_filter_buttons = QButtonGroup()
         self.settings_button = QPushButton("User Preferences")
@@ -341,10 +344,13 @@ class ReportScreen(QWidget):
 
     def populate_filters_layout(self, active_filters):
         self.filters_layout.addWidget(QLabel("Active Filters: "))
+        # for i in range(len(active_filters)):
+        #     button = QPushButton(active_filters[i])
+        #     self.remove_filter_buttons.addButton(button, i)
+        #     self.filters_layout.addWidget(button)
+
         for i in range(len(active_filters)):
-            button = QPushButton(active_filters[i])
-            self.remove_filter_buttons.addButton(button, i)
-            self.filters_layout.addWidget(button)
+            self.filters_layout.addWidget(QLabel(active_filters[i]))
         self.filters_layout.addWidget(self.clear_filters_button)
 
     def display_pdf(self, filename, report_name, row, col):
