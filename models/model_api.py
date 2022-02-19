@@ -15,12 +15,12 @@ class ModelApi(object):
     def get_state(self):
         """Get copy of model state"""
         return copy.deepcopy(self.state)
-    
+
     def set_state(self, state):
         """Set model state"""
         if state is not None:
             self.state = state
-    
+
     def get_parameters(self):
         """Get copy of model parameters"""
         return copy.deepcopy(self.parameters)
@@ -29,7 +29,7 @@ class ModelApi(object):
         """Set model parameters"""
         if parameters is not None:
             self.parameters = parameters
-    
+
     def update_inputs(self, input_data, labels=None):
         """
         Parameters:
@@ -54,7 +54,7 @@ class ModelApi(object):
         """
         Return recent model results, Each result is a dict of dicts
         Highest level of keys will be ['modality', 'body_part', 'dr_name', 'clinic_name', 'date_of_procedure']
-        Second level of keys will always contain ['label'] but might also have additional keys if model outputs that info
+        Second level of keys will always contain ['label'] but might also have additional keys
 
         Returns:
         --------
@@ -63,7 +63,7 @@ class ModelApi(object):
         results = self.results
         self.results = {}
         return results
-    
+
     def predict(self, input_data):
         """
         Do inference predictions on list of input texts.
@@ -72,7 +72,7 @@ class ModelApi(object):
         -----------
         input_data: dict of str
             Input texts and associated IDs as keys
-        
+
         Returns:
         --------
         results: dict of dict
@@ -85,4 +85,38 @@ class ModelApi(object):
     def train(self):
         """Model does training based on input data. Stores trained parameters in self.parameters"""
         raise NotImplementedError()
-    
+
+    def __getattribute__(self, __name):
+        """Make class getattribute fetch from self.parameters dictionary first
+
+        Parameters
+        ----------
+        __name : str
+
+        Returns
+        -------
+        Any
+            Attribute if it's in self.parameters else default to self.__dict__
+        """
+        if __name in self.parameters.keys():
+            return self.parameters.get(__name, None)
+        else:
+            return super().__getattribute__(__name)
+
+    def __setattr__(self, __name, __value):
+        """Make class setattr try to update self.parameters dictionary first
+
+        Parameters
+        ----------
+        __name : str
+        __value : Any
+
+        Returns
+        -------
+        None
+        """
+        if __name in self.parameters.keys():
+            self.parameters.update({__name: __value})
+        else:
+            super().__setattr__(__name, __value)
+        return None
