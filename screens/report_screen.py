@@ -3,7 +3,7 @@ import screens.supporting_classes as helpers
 from PyQt5.QtGui import QPixmap, QBrush, QColor, QFont
 from PyQt5.QtWidgets import QWidget
 
-from PyQt5.QtCore import Qt, QThread
+from PyQt5.QtCore import Qt, QThread, QRect
 
 from PyQt5.QtWidgets import QGridLayout, QLabel, QToolBar, QStatusBar, QDialog, QTableWidgetItem, QHeaderView, \
     QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox, \
@@ -16,6 +16,8 @@ class ReportScreen(QWidget):
 
         self.patient_name = "Default"
         self.patient_label = QLabel("Patient: Default")
+        self.no_results = QLabel("No reports to show")
+        self.no_results.setHidden(True)
 
         self.create_buttons()
         self.create_user_inputs()
@@ -42,6 +44,7 @@ class ReportScreen(QWidget):
         self.vertical_main.addLayout(self.settings_layout)
         self.vertical_main.addLayout(self.search_layout)
         self.vertical_main.addLayout(self.filters_layout)
+        self.vertical_main.addWidget(self.no_results)
         self.vertical_main.addLayout(self.table_grid)
 
     def create_table_grid(self, current_categories):
@@ -122,18 +125,21 @@ class ReportScreen(QWidget):
         self.settings_layout.addWidget(self.settings_button)
 
     def create_buttons(self):
-        self.filter_button = QPushButton("Filters")
+        self.filter_button = QPushButton("Quick Search")
         self.import_button = QPushButton("Import File")
         self.go_button = QPushButton("Go")
         self.dialog_button = QPushButton("Apply Filters")
         self.back_button = QPushButton("Select A Different Patient")
         self.main_menu_button = QPushButton("Back to Main Menu")
-        self.clear_filters_button = QPushButton("Clear Active Filters")
+        self.clear_filters_button = QPushButton("Clear Search")
         self.dialog_clear_filters_button = QPushButton("Clear Filters")
         self.remove_filter_buttons = QButtonGroup()
         self.settings_button = QPushButton("User Preferences")
         self.apply_settings_button = QPushButton("Apply Settings")
         self.clear_display_name_group = QButtonGroup()
+        self.clear_modality_display_group = QButtonGroup()
+        self.clear_bodypart_display_group = QButtonGroup()
+        self.clear_institution_display_group = QButtonGroup()
         self.reset_display_names = QPushButton("Reset All")
 
     def create_user_inputs(self):
@@ -190,33 +196,26 @@ class ReportScreen(QWidget):
                                  "6mos-1yr": QCheckBox("6mos - 1yr"), "1yr-5yrs": QCheckBox("1yr - 5yrs"),
                              ">5yrs": QCheckBox("> 5 yrs")}
         self.bodypart_options = {"Head and Neck": QCheckBox(display_names["Head and Neck"]),
-                                 "Chest": QCheckBox(display_names["Chest"]), "Abdomen": QCheckBox("Abdomen"),
+                                 "Chest": QCheckBox(display_names["Chest"]),
+                                 "Abdomen": QCheckBox(display_names["Abdomen"]),
                                  "Upper Limbs": QCheckBox(display_names["Upper Limbs"]),
                                  "Lower Limbs": QCheckBox(display_names["Lower Limbs"]),
                                  "Other": QCheckBox(display_names["Other"])}
 
-    def create_settings_dialog_for_later(self, display_names):
+    def create_settings_dialog_for_later(self):
         self.settings_dialog = QDialog()
         self.settings_dialog.setWindowTitle("User Preferences")
-        self.settings_dialog.setMinimumSize(500,710)
+        self.settings_dialog.setMinimumSize(500,500)
         self.settings_dialog_layout = QGridLayout()
         self.create_tabs()
-        self.populate_table_columns_tab()
-        self.populate_display_names_tab(display_names)
         self.settings_dialog_layout.addWidget(self.user_pref_tabs)
         self.settings_dialog_layout.addWidget(self.apply_settings_button)
         self.settings_dialog.setLayout(self.settings_dialog_layout)
 
-    def populate_settings_dialog(self):
-        self.settings_dialog_layout.addWidget(QLabel("Select Visible Categories: "), 0, 0)
-        self.settings_dialog_layout.addWidget(QLabel("(drag to reorder)"), 1, 0)
-        self.settings_dialog_layout.addWidget(self.category_list)
-        self.settings_dialog_layout.addWidget(self.apply_settings_button)
-
     def create_tabs(self):
         self.user_pref_tabs = QTabWidget()
         self.table_colums_tab = QWidget()
-        self.display_names_tab = QWidget()
+        self.display_names_tab = QTabWidget()
         self.user_pref_tabs.addTab(self.table_colums_tab, "Table Columns")
         self.user_pref_tabs.addTab(self.display_names_tab, "Display Names")
 
@@ -227,42 +226,94 @@ class ReportScreen(QWidget):
         self.table_colums_tab.layout.addWidget(self.category_list)
         self.table_colums_tab.setLayout(self.table_colums_tab.layout)
 
-    def populate_display_names_tab(self, display_names):
+    def create_display_name_tables(self, modalities, bodyparts, institutions):
+        self.modality_display_table = QTableWidget()
+        self.create_display_name_table(self.modality_display_table, modalities, self.clear_modality_display_group)
+        self.bodypart_display_table = QTableWidget()
+        self.create_display_name_table(self.bodypart_display_table, bodyparts, self.clear_bodypart_display_group)
+        self.institutions_display_table = QTableWidget()
+        self.create_display_name_table(self.institutions_display_table, institutions,
+                                       self.clear_institution_display_group)
+
+    def populate_display_names_tabular(self):
         self.display_names_tab.layout = QGridLayout()
-        self.create_display_name_table(display_names)
-        self.display_names_tab.layout.addWidget(QLabel("Edit Display Names:"), 1, 1, 1, 1)
-        self.display_names_tab.layout.addWidget(self.display_names_table,2,1, 1, 2)
-        self.display_names_tab.layout.addWidget(self.reset_display_names, 3, 2)
+        self.display_names_tab.layout.addWidget(QLabel("Edit Modality Display Names:"), 1, 1, 1, 1)
+        self.display_names_tab.layout.addWidget(self.modality_display_table,2,1, 1, 2)
+        self.display_names_tab.layout.addWidget(QLabel("Edit Body Part Display Names:"), 3, 1, 1, 1)
+        self.display_names_tab.layout.addWidget(self.bodypart_display_table, 4, 1, 1, 2)
+        self.display_names_tab.layout.addWidget(QLabel("Edit Institutions Display Names:"), 5, 1, 1, 1)
+        self.display_names_tab.layout.addWidget(self.institutions_display_table, 6, 1, 1, 2)
+        self.display_names_tab.layout.addWidget(self.reset_display_names, 7, 2)
         self.display_names_tab.setLayout(self.display_names_tab.layout)
 
-    def create_display_name_table(self, display_names):
-        self.display_names_table = QTableWidget()
-        self.display_names_table.setColumnCount(2)
-        self.display_names_table.setRowCount(len(display_names))
+    def create_displaynames_tabs(self):
+        self.modality_tab = QWidget()
+        self.bodyparts_tab = QWidget()
+        self.institutions_tab = QWidget()
+        self.display_names_tab.addTab(self.modality_tab, "Modalities")
+        self.display_names_tab.addTab(self.bodyparts_tab, "Body Parts")
+        self.display_names_tab.addTab(self.institutions_tab, "Institutions")
+
+    def populate_display_names_tabs(self):
+        self.populate_display_names_tab(self.modality_tab, self.modality_display_table)
+        self.populate_display_names_tab(self.bodyparts_tab, self.bodypart_display_table)
+        self.populate_display_names_tab(self.institutions_tab, self.institutions_display_table)
+
+    def populate_display_names_tab(self, tab, table):
+        tab.layout = QVBoxLayout()
+        label = QLabel("Edit Display Names:")
+        tab.layout.addWidget(label)
+        tab.layout.setAlignment(label, Qt.AlignTop)
+        tab.layout.addWidget(table)
+        tab.layout.setAlignment(Qt.AlignTop)
+        tab.layout.addStretch()
+        tab.setLayout(tab.layout)
+
+    def create_display_name_table(self, display_names_table, display_names, button_group):
+        # display_names_table = QTableWidget()
+        display_names_table.setColumnCount(2)
+        display_names_table.setRowCount(len(display_names))
         header_font = QFont()
         header_font.setBold(True)
-        self.display_names_table.horizontalHeader().setFont(header_font)
-        self.display_names_table.setHorizontalHeaderLabels(['Display Name', ''])
+        display_names_table.horizontalHeader().setFont(header_font)
+        display_names_table.setHorizontalHeaderLabels(['Display Name', ''])
         # self.display_names_table.verticalHeader().setVisible(False)
-        self.display_names_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.display_names_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        self.display_names_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.populate_display_names_table(display_names)
+        display_names_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        display_names_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        display_names_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.populate_display_names_table(display_names_table, display_names, button_group)
 
-    def populate_display_names_table(self, display_names):
-        self.display_names_table.setVerticalHeaderLabels(display_names.keys())
+    def resize_Table(self, table):
+        # got this code from https://forum.qt.io/topic/26799/qtablewidget-shrink-to-fit/2
+        table_width = 2 + table.verticalHeader().width()
+        for i in range(table.columnCount()):
+            table_width = table_width + table.columnWidth(i)
+
+        table_height = 2 + table.horizontalHeader().height()
+        for i in range(table.rowCount()):
+            table_height = table_height + table.rowHeight(i)
+
+        table.setMinimumHeight(table_height)
+        table.setMaximumWidth(table_width)
+
+    def populate_display_names_table(self, display_names_table, display_names, button_group):
+        display_names_table.setRowCount(len(display_names))
+        display_names_table.setVerticalHeaderLabels(display_names.keys())
         row = 0
         for key in display_names.keys():
             line_edit = QLineEdit()
             line_edit.setPlaceholderText(key)
             if key != display_names[key]:
                 line_edit.setText(display_names[key])
-            self.display_names_table.setCellWidget(row, 0, line_edit)
+            display_names_table.setCellWidget(row, 0, line_edit)
             xbutton = QPushButton("X")
             xbutton.setMaximumSize(60,80)
-            self.display_names_table.setCellWidget(row, 1, xbutton)
-            self.clear_display_name_group.addButton(xbutton, row)
+            display_names_table.setCellWidget(row, 1, xbutton)
+            button_group.addButton(xbutton, row)
             row = row+1
+        display_names_table.resizeColumnsToContents()
+        display_names_table.resizeRowsToContents()
+        self.resize_Table(display_names_table)
 
     def create_categories(self):
         self.create_category_options()
@@ -293,10 +344,13 @@ class ReportScreen(QWidget):
 
     def populate_filters_layout(self, active_filters):
         self.filters_layout.addWidget(QLabel("Active Filters: "))
+        # for i in range(len(active_filters)):
+        #     button = QPushButton(active_filters[i])
+        #     self.remove_filter_buttons.addButton(button, i)
+        #     self.filters_layout.addWidget(button)
+
         for i in range(len(active_filters)):
-            button = QPushButton(active_filters[i])
-            self.remove_filter_buttons.addButton(button, i)
-            self.filters_layout.addWidget(button)
+            self.filters_layout.addWidget(QLabel(active_filters[i]))
         self.filters_layout.addWidget(self.clear_filters_button)
 
     def display_pdf(self, filename, report_name, row, col):

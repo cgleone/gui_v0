@@ -22,13 +22,16 @@ class Model():
 
         self.current_patient_ID = None
         self.current_physician_ID = None
-        self.current_filters = None
+        self.current_filters = {}
         self.current_categories = None
         self.filter_options = None
         self.date_filters = None
         self.db_functions = None
         self.current_report_IDs = None
         self.display_names = None
+        self.modality_display_names = None
+        self.bodypart_display_names = None
+        self.current_institutions = {}
 
         self.set_current_patient_ID(22)
         self.set_current_physician_ID(1)
@@ -38,6 +41,7 @@ class Model():
         self.set_default_categories()
         self.set_db_functions()
         self.set_display_names()
+        self.set_current_institutions()
 
 
 
@@ -112,8 +116,8 @@ class Model():
     def set_db_functions(self):
         self.db_functions = {"Exam Date": self.db_connection.get_report_date,
                              "File Name": self.db_connection.get_report_name,
-                             "Imaging Modality": self.db_connection.get_report_modality_display,
-                             "Body Part": self.db_connection.get_report_bodypart_display,
+                             "Imaging Modality": self.db_connection.get_report_modality,
+                             "Body Part": self.db_connection.get_report_bodypart,
                              "Institution": self.db_connection.get_report_institution,
                              "Clinician": self.db_connection.get_report_clinician,
                              "Notes": self.db_connection.get_report_notes}
@@ -131,6 +135,22 @@ class Model():
                               'Lower Limbs': physician_preferences[9],
                               'Other': physician_preferences[10]}
 
+        self.modality_display_names = {'X-ray': physician_preferences[1],
+                                       'MRI': physician_preferences[2],
+                                       'CT': physician_preferences[3],
+                                       'Ultrasound': physician_preferences[4]}
+        self.bodypart_display_names = {'Head and Neck': physician_preferences[5],
+                                       'Chest': physician_preferences[6],
+                                       'Abdomen': physician_preferences[7],
+                                       'Upper Limbs': physician_preferences[8],
+                                       'Lower Limbs': physician_preferences[9],
+                                       'Other': physician_preferences[10]}
+
+    def set_current_institutions(self):
+        institutions = self.db_connection.get_institutions_in_db(self.current_physician_ID)
+        for institute in institutions:
+            self.current_institutions.update({institute[0]: institute[1]})
+
     def import_report(self, path):
         filename = path.split('/')[-1]
         id = str(self.db_connection.generate_report_id())
@@ -139,6 +159,7 @@ class Model():
         self.call_ocr(filename, id)
         # self.call_nlp(id)
         self.call_fake_nlp(id)
+        self.deal_with_institution(id)
 
     def call_ocr(self, filename, id):
         report_text = ocr_main.run_ocr(filename)
@@ -146,11 +167,18 @@ class Model():
 
     def call_fake_nlp(self, report_id):
         labels = generate_random_tags()
-        mod_display = self.get_display_name(labels[0])
-        bp_display = self.get_display_name(labels[1])
-        label_args = [self.current_patient_id, report_id] + labels + [mod_display, bp_display]
-        # label_args = [self.current_patient_ID, report_id] + labels
+        # mod_display = self.get_display_name(labels[0])
+        # bp_display = self.get_display_name(labels[1])
+        # label_args = [self.current_patient_ID, report_id] + labels + [mod_display, bp_display]
+        label_args = [self.current_patient_ID, report_id] + labels
         self.db_connection.add_labels(label_args)
+
+    def deal_with_institution(self, report_id):
+        institution = self.db_connection.get_report_institution(report_id)[0][0]
+        is_Existing_Institution = institution in self.current_institutions.keys()
+        if not is_Existing_Institution:
+            self.db_connection.add_institution(institution, self.current_physician_ID)
+            self.set_current_institutions()
 
     def get_unique_report_paths(self, report_name, id):
         filename = report_name.split('.')[0]
@@ -176,10 +204,10 @@ class Model():
         nlp_data = self.nlp_model.predict({0: text})[0]
         labels = [nlp_data['modality'], nlp_data['body_part'], nlp_data['clinic_name'],
                   nlp_data['dr_name'], nlp_data['date_of_procedure']]
-        mod_display = self.get_display_name(labels[0])
-        bp_display = self.get_display_name(labels[1])
-        label_args = [self.current_patient_id, report_id] + labels + [mod_display, bp_display]
-        # label_args = [self.current_patient_ID, report_id] + labels
+        # mod_display = self.get_display_name(labels[0])
+        # bp_display = self.get_display_name(labels[1])
+        # label_args = [self.current_patient_ID, report_id] + labels + [mod_display, bp_display]
+        label_args = [self.current_patient_ID, report_id] + labels
         self.db_connection.add_labels(label_args)
 
     def set_filters(self, modalities, bodyparts, dates):
@@ -201,10 +229,12 @@ class Model():
         checked_bodyparts = self.get_checked_datatype(checked_bodyparts, "bodyparts")
 
         checked_dates = []
+        checked_dates_values = []
         for key in dates.keys():
             if dates[key].isChecked():
                 checked_dates.append(key)
-        active_filters = active_filters + checked_dates
+                checked_dates_values.append(dates[key].text())
+        active_filters = active_filters + checked_dates_values
 
         checked_filters = {"modality": checked_modalities, "bodypart": checked_bodyparts, "exam_date": checked_dates}
 
@@ -229,6 +259,8 @@ class Model():
     def uncheck_filter(self, filter_to_remove, filter_checkboxes):
         for i in range(len(filter_checkboxes)):
             for key, value in filter_checkboxes[i].items():
+                valtext = value.text()
+                filtertext = filter_to_remove.text()
                 if value.text() == filter_to_remove.text():
                     filter_checkboxes[i][key].setChecked(False)
 
@@ -301,8 +333,18 @@ class Model():
             display = []
             display_with_ID = []
             for category in self.current_categories:
-                display.append(self.db_functions[category](id))
-                display_with_ID.append(self.db_functions[category](id))
+                label = self.db_functions[category](id)
+                if label[0][0] in self.display_names.keys():
+                    data = self.display_names[label[0][0]]
+                    data = [(data,)]
+                elif label[0][0] in self.current_institutions.keys():
+                    data = self.current_institutions[label[0][0]]
+                    data = [(data,)]
+                else:
+                    data = label
+                display.append(data)
+                display_with_ID.append(data)
+
             display_with_ID.append([[id]])
 
             display_data.append(display)
@@ -345,18 +387,32 @@ class Model():
             if category.text() in self.current_categories:
                 category.setCheckState(Qt.Checked)
 
-    def determine_display_names(self, table):
+    def determine_display_names(self, table, display_name_dict):
         rows = table.rowCount()
         for i in range(rows):
             category = table.verticalHeaderItem(i).text()
             display_name = table.cellWidget(i,0).text()
             if display_name != '':
                 self.display_names[category] = display_name
+                display_name_dict[category] = display_name
             else:
                 self.display_names[category] = category
+                display_name_dict[category] = category
             query_values = (category, self.display_names[category], self.current_physician_ID)
             self.db_connection.update_display_name_db(query_values)
-        self.update_display_columns_db()
+        # self.update_display_columns_db()
+
+    def determine_institution_display_names(self, table):
+        rows = table.rowCount()
+        for i in range(rows):
+            formal_name = table.verticalHeaderItem(i).text()
+            display_name = table.cellWidget(i,0).text()
+            if display_name != '':
+                self.current_institutions[formal_name] = display_name
+            else:
+                self.current_institutions[formal_name] = formal_name
+            id_institutions = self.db_connection.get_id_institutions(self.current_physician_ID, formal_name)[0][0]
+            self.db_connection.update_institution_display_name_db(self.current_institutions[formal_name], id_institutions)
 
     def update_display_columns_db(self, report_ids = None):
         if report_ids is None:
@@ -391,6 +447,10 @@ class Model():
     def reset_all_display_names(self, display_names_table):
         for i in range(display_names_table.rowCount()):
             display_names_table.cellWidget(i, 0).clear()
+
+    def clear_searchbar(self, searchbar):
+        searchbar.clear()
+
 
 
     def set_category_dict(self):
@@ -498,7 +558,7 @@ class Model():
 
         labels_searched_for, date_in_search = self.label_search_main(user_query, all_current_label_options)
         if len(labels_searched_for) == 0 and date_in_search == [[], []]:
-            return []
+            return [[], []]
         elif len(labels_searched_for) > 0:
             print("labels searched for: {}".format(labels_searched_for))
             labels_with_types = self.assign_label_type(labels_searched_for)
@@ -508,11 +568,11 @@ class Model():
                 final_ids = self.search_by_date(ids_from_labels, date_in_search[0], date_in_search[1])
             else:
                 final_ids = ids_from_labels
-            return final_ids
+            return [final_ids, labels_searched_for]
         else:
             all_ids = self.db_connection.get_report_IDs(self.current_patient_ID)
             final_ids = self.search_by_date(all_ids, date_in_search[0], date_in_search[1])
-            return final_ids
+            return [final_ids, []]
        # ids = self.apply_search_labels(desired_institutions)
 
 
@@ -672,6 +732,15 @@ class Model():
     def read_csv(self):
         self.all_institutions = pd.read_csv('institution_list.csv')
        # print(self.all_institutions)
+
+    def link_search_and_filters(self, labels, checkmark_categories):
+        if labels != []:
+            for category in checkmark_categories:
+                for checkmark in category.items():
+                    for label in labels:
+                        if label == checkmark[0].casefold():
+                            checkmark[1].setChecked(True)
+
 
 
 
