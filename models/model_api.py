@@ -101,7 +101,7 @@ class ModelApi(object):
         if __name == 'parameters':
             return {}
         if __name in self.parameters.keys():
-            return self.parameters.get(__name, None)    
+            return self.parameters.get(__name, None)
 
     def __setattr__(self, __name, __value):
         """Make class setattr try to update self.parameters dictionary first
