@@ -43,7 +43,7 @@ class Model():
         self.set_display_names()
         self.set_current_institutions()
 
-
+        self.in_label_correction_mode = False
 
         self.short_form_dictionary = {"X-ray": ["x-ray", "xray"],
                                       "MRI": ["mr"],

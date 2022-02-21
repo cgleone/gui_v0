@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt, QThread, QRect
 
 from PyQt5.QtWidgets import QGridLayout, QLabel, QToolBar, QStatusBar, QDialog, QTableWidgetItem, QHeaderView, \
     QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox, \
-    QButtonGroup, QTreeWidget, QTreeWidgetItem, QAbstractItemView, QListWidget, QListWidgetItem, QTabWidget
+    QButtonGroup, QTreeWidget, QTreeWidgetItem, QAbstractItemView, QListWidget, QListWidgetItem, QTabWidget, QFrame
 
 
 class ReportScreen(QWidget):
@@ -17,12 +17,20 @@ class ReportScreen(QWidget):
         self.patient_name = "Default"
         self.patient_label = QLabel("Patient: Default")
         self.no_results = QLabel("No reports to show")
+        self.correction_instructions = QLabel("Click on a report to edit its labels")
+        self.correction_instructions.setStyleSheet("color: #8b0000; font: bold 18px;")
         self.no_results.setHidden(True)
+
+        self.grey_widget = QLabel(" ")
+        self.grey_widget.setStyleSheet("background-color: rgba(0, 0, 0, 10);")
+        self.grey_widget.setFixedHeight(150)
+        self.grey_widget.setFixedWidth(1000)
 
         self.create_buttons()
         self.create_user_inputs()
         self.create_dialog_for_later()
         self.create_layouts()
+        self.cell_hover_colour = '#E0EEEE'
 
     def create_layouts(self):
         self.vertical_main = QVBoxLayout()
@@ -33,11 +41,21 @@ class ReportScreen(QWidget):
         self.search_layout = QHBoxLayout()
         self.filters_layout = QHBoxLayout()
         self.settings_layout = QHBoxLayout()
+        self.label_correction_layout = QHBoxLayout()
+        self.label_correction_frame = QFrame()
+        self.label_correction_frame.setLayout(self.label_correction_layout)
 
         self.populate_vertical_main()
         self.populate_title_layout()
         self.populate_search_layout()
         self.populate_settings_layout()
+        self.populate_label_correction_layout()
+
+        self.empty_grey_widgets = [QWidget(), QWidget(), QWidget(), QWidget()]
+        for widget in self.empty_grey_widgets:
+            widget.setStyleSheet("background-color=blue")
+            widget.setFixedHeight(30)
+
 
     def populate_vertical_main(self):
         self.vertical_main.addLayout(self.title_layout)
@@ -46,6 +64,7 @@ class ReportScreen(QWidget):
         self.vertical_main.addLayout(self.filters_layout)
         self.vertical_main.addWidget(self.no_results)
         self.vertical_main.addLayout(self.table_grid)
+        self.vertical_main.addWidget(self.label_correction_frame)
 
     def create_table_grid(self, current_categories):
         self.report_table = QTableWidget()
@@ -90,10 +109,10 @@ class ReportScreen(QWidget):
                 try:
                     old_item.setBackground(QBrush(QColor('white')))
                     old_item.setFont(normal)
-                    item.setBackground(QBrush(QColor('#E0EEEE')))
+                    item.setBackground(QBrush(QColor(self.cell_hover_colour)))
                     item.setFont(underlined)
                 except:
-                    item.setBackground(QBrush(QColor('#E0EEEE')))
+                    item.setBackground(QBrush(QColor(self.cell_hover_colour)))
                     item.setFont(underlined)
                     print("problem caught")
             col = col + 1
@@ -124,6 +143,45 @@ class ReportScreen(QWidget):
         self.settings_layout.addStretch(1)
         self.settings_layout.addWidget(self.settings_button)
 
+    def populate_label_correction_layout(self):
+        self.label_correction_layout.addWidget(self.label_correction_button, 0, alignment=Qt.AlignRight)
+
+    def enter_label_correction_mode(self):
+        self.label_correction_layout.removeWidget(self.label_correction_button)
+        self.label_correction_button.hide()
+        self.label_correction_layout.addWidget(self.correction_instructions, 0, alignment=Qt.AlignLeft)
+        self.label_correction_layout.addWidget(self.done_correction_button, 1, alignment=Qt.AlignRight)
+        self.done_correction_button.show()
+        self.correction_instructions.show()
+        self.cell_hover_colour = '#fc9992'
+        self.label_correction_frame.setStyleSheet("background-color: white")
+        self.enable_actions(False)
+
+    def exit_label_correction_mode(self):
+        self.label_correction_layout.removeWidget(self.correction_instructions)
+        self.label_correction_layout.removeWidget(self.done_correction_button)
+        self.correction_instructions.hide()
+        self.done_correction_button.hide()
+        self.label_correction_layout.addWidget(self.label_correction_button, 0, alignment=Qt.AlignRight)
+        self.label_correction_button.show()
+        self.cell_hover_colour = '#E0EEEE'
+        self.report_table.setStyleSheet("")
+        self.label_correction_frame.setStyleSheet("")
+        self.enable_actions(True)
+
+    def enable_actions(self, enable):
+        for layout in [self.title_layout, self.settings_layout, self.filters_layout, self.search_layout]:
+            for i in range(layout.count()):
+                widget = layout.itemAt(i).widget()
+                try:
+                    widget.setEnabled(enable)
+                except:
+                    random_nonsense = True
+
+
+
+
+
     def create_buttons(self):
         self.filter_button = QPushButton("Quick Search")
         self.import_button = QPushButton("Import File")
@@ -141,6 +199,46 @@ class ReportScreen(QWidget):
         self.clear_bodypart_display_group = QButtonGroup()
         self.clear_institution_display_group = QButtonGroup()
         self.reset_display_names = QPushButton("Reset All")
+        self.label_correction_button = QPushButton("Enter Label Correction Mode")
+        self.label_correction_button.setStyleSheet("color: white; "
+                                                   "background-color: #8b0000; "
+                                                   "font: bold 14px;"
+                                                   "border-style: outset; "
+                                                   "border-width: 2px; "
+                                                   "border-radius: 10px;"
+                                                   "border-color: black; "
+                                                   "font: bold 14px; "
+                                                   "min-width: 10em; "
+                                                   "padding: 6px;")
+
+        self.done_correction_button = QPushButton("Done")
+        self.done_correction_button.setStyleSheet("color: white; "
+                                                  "background-color: green; "
+                                                  "font: bold 14px;"
+                                                  "border-style: outset; "
+                                                  "border-width: 2px; "
+                                                  "border-radius: 10px;"
+                                                  "border-color: black; "
+                                                  "font: bold 14px; "
+                                                  "min-width: 10em; "
+                                                  "padding: 6px;")
+
+        self.all_buttons = [self.filter_button, self.go_button, self.settings_button, self.reset_display_names,
+                            self.dialog_button, self.back_button, self.main_menu_button, self.import_button]
+
+    def set_table_color(self):
+        self.report_table.setStyleSheet("")
+
+        for row in range(self.report_table.rowCount()):
+            for col in range(0, self.column_count):
+                item = self.report_table.item(row, col)
+                item.setBackground(QBrush(QColor('white')))
+        self.report_table.horizontalHeader().setStyleSheet("background-color: white")
+        self.report_table.setStyleSheet("border-style: outset; "
+                                                  "border-width: 2px; "
+                                                  "border-radius: 1px;"
+                                                  "border-color: black;")
+
 
     def create_user_inputs(self):
         self.search_bar = QLineEdit()

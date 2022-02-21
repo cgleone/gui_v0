@@ -24,7 +24,7 @@ class Controller:
         self.view.report_screen.import_button.clicked.connect(self.import_file)
         self.view.report_screen.filter_button.clicked.connect(self.filter_selection)
         self.view.report_screen.dialog_button.clicked.connect(self.apply_filters)
-        self.view.report_screen.report_table.cellPressed.connect(self.view_report)
+        self.view.report_screen.report_table.cellPressed.connect(self.report_clicked)
         self.view.report_screen.go_button.clicked.connect(self.begin_search)
         self.view.report_screen.search_bar.returnPressed.connect(self.begin_search)
         self.view.report_screen.clear_filters_button.clicked.connect(self.clear_filters)
@@ -38,6 +38,8 @@ class Controller:
         self.view.report_screen.clear_bodypart_display_group.buttonClicked.connect(self.reset_single_bodypart_display_name)
         self.view.report_screen.clear_institution_display_group.buttonClicked.connect(self.reset_single_institution_display_name)
         self.view.report_screen.reset_display_names.clicked.connect(self.reset_all_display_names)
+        self.view.report_screen.label_correction_button.clicked.connect(self.enter_label_correction_mode)
+        self.view.report_screen.done_correction_button.clicked.connect(self.exit_label_correction_mode)
 
         self.view.home.select_button.clicked.connect(self.patient_select_screen)
         self.view.home.quit_button.clicked.connect(self.view.close)
@@ -45,6 +47,16 @@ class Controller:
         self.view.patient_select.back_button.clicked.connect(self.view.go_to_home)
         self.view.patient_select.patient_table.cellPressed.connect(self.view_patient)
 
+    def enter_label_correction_mode(self):
+        self.view.report_screen.enter_label_correction_mode()
+        self.model.in_label_correction_mode = True
+        self.view.setStyleSheet("background-color: #969696")
+        self.view.report_screen.set_table_color()
+
+    def exit_label_correction_mode(self):
+        self.view.report_screen.exit_label_correction_mode()
+        self.model.in_label_correction_mode = False
+        self.view.setStyleSheet("")
 
     def patient_select_screen(self):
         self.view.go_to_patient_select()
@@ -59,13 +71,15 @@ class Controller:
         self.view.report_screen.set_patient_name(self.model.get_patient_name())
         self.view.go_to_report_screen()
 
-
-    def view_report(self, row, col):
-        filename, isPDF, name = self.model.view_report(row, col)
-        if isPDF:
-            self.view.report_screen.display_pdf(filename, name, row, col)
+    def report_clicked(self, row, col):
+        if self.model.in_label_correction_mode:
+            pass # not implemented
         else:
-             self.view.report_screen.display_image_report(filename, name)
+            filename, isPDF, name = self.model.view_report(row, col)
+            if isPDF:
+                self.view.report_screen.display_pdf(filename, name, row, col)
+            else:
+                 self.view.report_screen.display_image_report(filename, name)
 
     def begin_search(self):
         user_query = self.view.report_screen.search_bar.text()

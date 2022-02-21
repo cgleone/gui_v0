@@ -55,3 +55,4 @@ class View(QMainWindow):
 
     def set_table_row_count(self, row_count, table):
         table.setRowCount(row_count)
+
