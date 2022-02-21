@@ -14,7 +14,7 @@ class DB_Connection:
         self.db = mysql.connect(
             host="localhost",
             user="root",
-            passwd="#Darren89candiesEW!",
+            passwd="FYDP2022",
             database="reportdata")
 
         self.cursor = self.db.cursor()
@@ -167,7 +167,7 @@ class DB_Connection:
         return self.cursor.fetchall()
 
     def get_physician_preferences(self, id):
-        query = "SELECT * FROM physician_preferences WHERE physician_id = %s"
+        query = "SELECT * FROM physician_preferences WHERE physician_id = '%s'"
         self.cursor.execute(query % id)
         preferences = self.cursor.fetchall()
         return preferences[0]

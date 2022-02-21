@@ -362,10 +362,16 @@ class Model():
         if report_ids is None:
             report_ids = self.db_connection.get_all_report_ids()
         for report_id in report_ids:
-            modality = self.db_connection.get_report_modality(report_id)[0][0]
-            modality_display = self.display_names[modality]
-            bodypart = self.db_connection.get_report_bodypart(report_id)[0][0]
-            bodypart_display = self.display_names[bodypart]
+            print(report_id)
+            try:
+                modality = self.db_connection.get_report_modality(report_id)[0][0]
+                bodypart = self.db_connection.get_report_bodypart(report_id)[0][0]
+                modality_display = self.display_names[modality]
+                bodypart_display = self.display_names[bodypart]
+            except:
+                modality_display = ""
+                bodypart_display = ""
+
             query_values = (modality_display, bodypart_display, report_id[0])
             self.db_connection.update_label_table_display_name_column(query_values)
 
