@@ -8,6 +8,8 @@ import warnings
 import itertools
 import pandas as pd
 import numpy as np
+from torch.utils.data import Dataset, DataLoader
+import torch
 
 
 class Document(UserDict):
@@ -122,9 +124,9 @@ def clean_text(text):
 
 def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path):
     """
-    Creates SQuAD formatted training data from a given snapshot. First it splits the documents by token lenghth, and then 
-    finds the true text in the contents of the reports and saves the SQuAD format QA pairs into a JSON file.
-    
+    Creates SQuAD formatted training data from a given snapshot. First it splits the documents by token lenghth,
+    and then finds the true text in the contents of the reports and saves the SQuAD format QA pairs into a JSON file.
+
     Parameters
     ----------
     snapshot : dict of Documents
@@ -137,23 +139,24 @@ def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path):
         Path that the JSON file will be saved to
 
     """
-    questions = {'dr':"What is the doctor's name?",
-                'date_taken': "What date was it taken on?",
-                'clinic':"What is the name of the clinic?",
-                'body_part': "What is the body part?",
-                'modality': "What is the imaging modality?"
+    questions = {
+        'dr': "What is the doctor's name?",
+        'date_taken': "What date was it taken on?",
+        'clinic': "What is the name of the clinic?",
+        'body_part': "What is the body part?",
+        'modality': "What is the imaging modality?"
     }
-    
+
     squad = []
     training_data = text_split_preprocess(snapshot, tokenizer, max_seq_len=max_seq_len)
-    
+
     training_data['id_search'] = training_data['id']
 
     for index, row in training_data.iterrows():
         searchId = row['id']
         searchId = searchId[0:-2]
         training_data['id_search'][index] = searchId
-        
+
     for key, doc in snapshot.items():
         relevant_labels = doc.get_labels_to_classify()
 
@@ -165,25 +168,25 @@ def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path):
             qas = []
 
             for q, (label_type, labels) in zip(questions, relevant_labels.items()):
-                
+
                 if labels is not None:
 
                     ans_text = labels['true text']
-                else: 
+                else:
                     break
-                
+
                 offset = row['text'].find(ans_text)
-                
+
                 if offset != -1:
                     qa = {
                         'answers': [
                             {
-                            'answer_start': offset,
-                            'text': ans_text
+                                'answer_start': offset,
+                                'text': ans_text
                             }
                         ],
                         'question': questions[q],
-                        'id':str(uuid.uuid4()),
+                        'id': str(uuid.uuid4()),
                         'is_impossible': False
                     }
 
@@ -191,22 +194,22 @@ def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path):
                     qa = {
                         'answers': [
                             {
-                            'answer_start': offset,
-                            'text': ans_text
+                                'answer_start': offset,
+                                'text': ans_text
                             }
                         ],
                         'question': questions[q],
-                        'id':str(uuid.uuid4()),
+                        'id': str(uuid.uuid4()),
                         'is_impossible': True
                     }
-                
+
                 qas.append(qa)
 
             temp['paragraphs'] = [{
                 'context': row['text'],
                 'qas': qas
             }]
-        
+
         squad.append(temp)
 
     train_squad_data = {'data': squad}
@@ -511,3 +514,30 @@ def ner_preprocess(snapshot, tokenizer, entity_labels, max_seq_len=512, stride=1
 
     training_data = pd.DataFrame(output)
     return training_data
+
+
+class TrainingDataset(Dataset):
+    def __init__(self, df, tokenizer, tokenization_params):
+        super().__init__()
+        self.df = df
+        self.tokenizer = tokenizer
+        self.params = tokenization_params
+        self.len = len(df)
+
+    def __len__(self):
+        return self.len
+
+    def __getitem__(self, index):
+        text = self.df.loc[index, 'text']
+        label = self.df.loc[index, 'label']
+        # Encode the text
+        encoding = self.tokenizer(text, **self.params)
+        encoding['label'] = label
+        encoding = {key: torch.as_tensor(val) for key, val in encoding.items()}
+        return encoding
+
+
+def df_to_dataloader(df, tokenizer, tokenization_params, batch_size=4, shuffle=True, num_workers=0):
+    dataset = TrainingDataset(df, tokenizer, tokenization_params)
+    dataloader = DataLoader(dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers)
+    return dataloader

@@ -1,4 +1,4 @@
-from models.minimal_model import ModelApi
+from .minimal_model import ModelApi
 
 
 class TrainingModel(ModelApi):

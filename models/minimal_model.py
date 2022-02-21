@@ -1,4 +1,4 @@
-from models.model_api import ModelApi
+from .model_api import ModelApi
 import dateparser
 import warnings
 import re

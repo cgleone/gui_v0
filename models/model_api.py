@@ -86,8 +86,8 @@ class ModelApi(object):
         """Model does training based on input data. Stores trained parameters in self.parameters"""
         raise NotImplementedError()
 
-    def __getattribute__(self, __name):
-        """Make class getattribute fetch from self.parameters dictionary first
+    def __getattr__(self, __name):
+        """Make class get attributes from self.parameters first
 
         Parameters
         ----------
@@ -96,12 +96,12 @@ class ModelApi(object):
         Returns
         -------
         Any
-            Attribute if it's in self.parameters else default to self.__dict__
         """
+        # No parameters found, return empty dict for now
+        if __name == 'parameters':
+            return {}
         if __name in self.parameters.keys():
-            return self.parameters.get(__name, None)
-        else:
-            return super().__getattribute__(__name)
+            return self.parameters.get(__name, None)    
 
     def __setattr__(self, __name, __value):
         """Make class setattr try to update self.parameters dictionary first
