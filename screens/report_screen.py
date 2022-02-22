@@ -1,8 +1,9 @@
+import math
 
 import screens.supporting_classes as helpers
 from PyQt5.QtGui import QPixmap, QBrush, QColor, QFont
-from PyQt5.QtWidgets import QWidget
-
+from PyQt5.QtWidgets import QWidget, QScrollArea
+from PIL import Image
 from PyQt5.QtCore import Qt, QThread, QRect
 
 from PyQt5.QtWidgets import QGridLayout, QLabel, QToolBar, QStatusBar, QDialog, QTableWidgetItem, QHeaderView, \
@@ -471,7 +472,7 @@ class ReportScreen(QWidget):
         except:
             dialog.exec()
 
-    def display_image_report(self, filename, report_name):
+    def display_image_report(self, path, report_name):
         dialog = QDialog()
         dialog.setWindowTitle(report_name)
         dialog_layout = QGridLayout()
@@ -479,9 +480,30 @@ class ReportScreen(QWidget):
         dialog.setFixedSize(800, 700)
 
         image = QLabel()
-        image.setPixmap(QPixmap(filename))
+        image.setPixmap(QPixmap(path))
         image.setScaledContents(True)
-        dialog_layout.addWidget(image)
+        pillow = Image.open(path)
+        w = pillow.width
+        h = pillow.height
+        frame_width = 750
+
+        adjusted_h = int(math.ceil(h*frame_width/w))
+        layout = QVBoxLayout()
+        layout.addWidget(image)
+
+        frame = QFrame()
+        frame.setFixedSize(frame_width, adjusted_h)
+        frame.setLayout(layout)
+
+        if adjusted_h > 600:
+            scroll = QScrollArea()
+            scroll.setFixedSize(frame_width, min([adjusted_h, 600]))
+            scroll.setWidgetResizable(False)
+            scroll.setWidget(frame)
+            dialog_layout.addWidget(scroll)
+        else:
+            frame.setFixedHeight(adjusted_h)
+            dialog_layout.addWidget(frame)
 
         dialog.exec()
 

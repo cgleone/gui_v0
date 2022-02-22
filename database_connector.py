@@ -78,7 +78,10 @@ class DB_Connection:
         print(report_ID)
         datetime = self.cursor.fetchone()
         # print(datetime)
-        date_string = datetime[-1].strftime("%Y-%m-%d")
+        try:
+            date_string = datetime[-1].strftime("%Y-%m-%d")
+        except:
+            return None
         return [(date_string,),]
 
     def get_report_modality(self, report_ID):

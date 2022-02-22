@@ -1,6 +1,9 @@
+import math
+
 import screens.supporting_classes as helpers
 from PyQt5.QtGui import QPixmap, QBrush, QColor, QFont, QCloseEvent
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QWidget, QScrollArea
+from PIL import Image
 
 from PyQt5.QtCore import Qt, QThread, QRect, pyqtSignal
 
@@ -67,10 +70,10 @@ class CorrectLabelDialog(QDialog):
         if isPDF:
             self.current_report = self.show_pdf(path)
         else:
-            self.current_report = self.show_image_report()
+            self.current_report = self.show_image_report(path)
 
         self.left_column.addWidget(self.title_label, alignment=Qt.AlignCenter)
-        self.left_column.addWidget(self.current_report)
+        self.left_column.addWidget(self.current_report, alignment=Qt.AlignTop)
         self.right_column.addWidget(self.tigger_thing, alignment=Qt.AlignCenter)
         self.right_column.addLayout(self.button_layout)
 
@@ -89,11 +92,32 @@ class CorrectLabelDialog(QDialog):
         viewer = helpers.ReportViewer(path)
         return viewer
 
-    def show_image_report(self):
+    def show_image_report(self, path):
         image = QLabel()
-        image.setPixmap(QPixmap(self.filename))
+        image.setPixmap(QPixmap(path))
         image.setScaledContents(True)
-        return image
+        pillow = Image.open(path)
+        w = pillow.width
+        h = pillow.height
+        frame_width = 700
+
+        adjusted_h = int(math.ceil(h*frame_width/w))
+        layout = QVBoxLayout()
+        layout.addWidget(image)
+
+        frame = QFrame()
+        frame.setFixedSize(frame_width, adjusted_h)
+        frame.setLayout(layout)
+
+        if adjusted_h > 600:
+            scroll = QScrollArea()
+            scroll.setFixedSize(frame_width, min([adjusted_h, 600]))
+            scroll.setWidgetResizable(False)
+            scroll.setWidget(frame)
+            return scroll
+        else:
+            frame.setFixedHeight(adjusted_h)
+            return frame
 
     def make_the_tigger_thing(self):
         label = QLabel("Hello Tigger, please put\n your awesome label editor here")

@@ -334,16 +334,20 @@ class Model():
             display_with_ID = []
             for category in self.current_categories:
                 label = self.db_functions[category](id)
-                if label[0][0] in self.display_names.keys():
-                    data = self.display_names[label[0][0]]
-                    data = [(data,)]
-                elif label[0][0] in self.current_institutions.keys():
-                    data = self.current_institutions[label[0][0]]
-                    data = [(data,)]
-                else:
-                    data = label
-                display.append(data)
-                display_with_ID.append(data)
+                try:
+                    if label[0][0] in self.display_names.keys():
+                        data = self.display_names[label[0][0]]
+                        data = [(data,)]
+                    elif label[0][0] in self.current_institutions.keys():
+                        data = self.current_institutions[label[0][0]]
+                        data = [(data,)]
+                    else:
+                        data = label
+                    display.append(data)
+                    display_with_ID.append(data)
+                except:
+                    display.append(" ")
+                    display_with_ID.append(" ")
 
             display_with_ID.append([[id]])
 
