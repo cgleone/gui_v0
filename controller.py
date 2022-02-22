@@ -120,8 +120,11 @@ class Controller:
             import_file_thread.start()
 
     def thread_interior(self):
+        self.view.report_screen.thread_is_running = True
         self.model.import_report(self.file_selection)
         self.get_report_info_to_display()
+        self.view.report_screen.thread_is_running = False
+
 
     def filter_selection(self):
         self.view.report_screen.show_dialog()
@@ -183,7 +186,11 @@ class Controller:
     def display_report_info(self):
         self.view.set_table_row_count(self.rows, self.view.report_screen.report_table)
         self.view.report_screen.populate_report_table(self.reports)
-        self.view.report_screen.import_enabled(True)
+        if not self.model.in_label_correction_mode:
+            self.view.report_screen.import_enabled(True)
+        else:
+            self.view.report_screen.set_table_color()
+
 
     def create_table_grid(self):
         current_categories = self.model.current_categories

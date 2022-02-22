@@ -73,7 +73,7 @@ def prep_image(file):
             if '\\' in jpg_path[0]:
                 return [jpg_path[0].split('\\')[-1]]
             else:
-                return jpg_path.split('/')[-1]
+                return [jpg_path[0].split('/')[-1]]
 
         else:  # it's a multiple page document
             returned_paths = []

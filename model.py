@@ -156,14 +156,26 @@ class Model():
         id = str(self.db_connection.generate_report_id())
         shutil.copy(path, self.get_unique_report_paths(filename, id)[0])
         shutil.copy(path, 'OCR/reports_temp/'+filename)
-        self.call_ocr(filename, id)
-        # self.call_nlp(id)
-        self.call_fake_nlp(id)
+        ocr_ran_successfully = self.call_ocr(filename, id)
+        if ocr_ran_successfully:
+            label_args = self.call_fake_nlp(id)
+            # label_args = self.call_nlp(id)
+        else:
+            label_args = [self.current_patient_ID, id] + [None]*5
+        self.db_connection.add_labels(label_args)
         self.deal_with_institution(id)
 
+
+
     def call_ocr(self, filename, id):
-        report_text = ocr_main.run_ocr(filename)
-        self.save_ocr_result(filename, id, report_text)
+        try:
+            report_text = ocr_main.run_ocr(filename)
+            self.save_ocr_result(filename, id, report_text)
+            return True
+        except:
+            report_text = " "
+            self.save_ocr_result(filename, id, report_text)
+            return False
 
     def call_fake_nlp(self, report_id):
         labels = generate_random_tags()
@@ -171,7 +183,7 @@ class Model():
         # bp_display = self.get_display_name(labels[1])
         # label_args = [self.current_patient_ID, report_id] + labels + [mod_display, bp_display]
         label_args = [self.current_patient_ID, report_id] + labels
-        self.db_connection.add_labels(label_args)
+        return label_args
 
     def deal_with_institution(self, report_id):
         institution = self.db_connection.get_report_institution(report_id)[0][0]
@@ -208,7 +220,7 @@ class Model():
         # bp_display = self.get_display_name(labels[1])
         # label_args = [self.current_patient_ID, report_id] + labels + [mod_display, bp_display]
         label_args = [self.current_patient_ID, report_id] + labels
-        self.db_connection.add_labels(label_args)
+        return label_args
 
     def set_filters(self, modalities, bodyparts, dates):
         checked_modalities = []

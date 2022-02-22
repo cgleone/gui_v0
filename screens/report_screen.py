@@ -179,6 +179,9 @@ class ReportScreen(QWidget):
                 except:
                     random_nonsense = True
 
+        if self.thread_is_running:
+            self.import_enabled(False)
+
 
 
 
