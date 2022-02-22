@@ -47,6 +47,11 @@ class Controller:
         self.view.patient_select.back_button.clicked.connect(self.view.go_to_home)
         self.view.patient_select.patient_table.cellPressed.connect(self.view_patient)
 
+        self.view.current_dialog.cancel_button.clicked.connect(self.cancel_label_correction_dialog)
+        self.view.current_dialog.done_button.clicked.connect(self.done_label_correction_dialog)
+
+        # self.view.current_dialog.dialog_closed.connect(self.cancel_label_correction_dialog)
+
     def enter_label_correction_mode(self):
         self.view.report_screen.enter_label_correction_mode()
         self.model.in_label_correction_mode = True
@@ -57,6 +62,14 @@ class Controller:
         self.view.report_screen.exit_label_correction_mode()
         self.model.in_label_correction_mode = False
         self.view.setStyleSheet("")
+
+    def cancel_label_correction_dialog(self):
+        print('hello')
+        self.view.close_label_correction_dialog()
+
+    def done_label_correction_dialog(self):
+        # save the new labels here!
+        self.view.close_label_correction_dialog()
 
     def patient_select_screen(self):
         self.view.go_to_patient_select()
@@ -72,14 +85,17 @@ class Controller:
         self.view.go_to_report_screen()
 
     def report_clicked(self, row, col):
+        filename, isPDF, name = self.model.view_report(row, col)
         if self.model.in_label_correction_mode:
-            pass # not implemented
+            self.view.open_label_correction_dialog(filename, name, isPDF)
         else:
-            filename, isPDF, name = self.model.view_report(row, col)
             if isPDF:
                 self.view.report_screen.display_pdf(filename, name, row, col)
             else:
                  self.view.report_screen.display_image_report(filename, name)
+
+
+
 
     def begin_search(self):
         user_query = self.view.report_screen.search_bar.text()

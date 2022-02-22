@@ -5,6 +5,7 @@ from PyQt5.QtGui import QPixmap, QBrush, QColor, QFont
 from screens.patient_select import PatientSelectScreen
 from screens.home import HomeScreen
 from screens.report_screen import ReportScreen
+from screens.correct_label_dialog import CorrectLabelDialog
 
 # Import QApplication and the required widgets from PyQt5.QtWidgets
 from PyQt5.QtWidgets import QMainWindow
@@ -33,6 +34,7 @@ class View(QMainWindow):
         # window size and title
         self.setWindowTitle("EMR Report Viewer")
         self.setFixedSize(1000,700)
+        self.current_dialog = CorrectLabelDialog()
 
         # self.create_settings_dialog_for_later()
 
@@ -56,3 +58,9 @@ class View(QMainWindow):
     def set_table_row_count(self, row_count, table):
         table.setRowCount(row_count)
 
+    def open_label_correction_dialog(self, filename, report_name, isPDF):
+        self.current_dialog.reset_dialog()
+        self.current_dialog.report_clicked(filename, report_name, isPDF)
+
+    def close_label_correction_dialog(self):
+        self.current_dialog.close()

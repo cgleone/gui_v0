@@ -7,7 +7,6 @@ from PyQt5.QtCore import Qt, QObject, pyqtSignal
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__)).rstrip('/screens')
 
-
 class PDFReport(PyQt5.QtWebEngineWidgets.QWebEngineView):
     def load_pdf(self, filename):
         path = os.path.join(CURRENT_DIR, filename)
