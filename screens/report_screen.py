@@ -33,6 +33,8 @@ class ReportScreen(QWidget):
         self.create_layouts()
         self.cell_hover_colour = '#E0EEEE'
 
+        self.thread_is_running = False
+
     def create_layouts(self):
         self.vertical_main = QVBoxLayout()
         self.setLayout(self.vertical_main)
