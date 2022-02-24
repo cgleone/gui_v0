@@ -228,6 +228,9 @@ class DB_Connection:
         query = "DELETE FROM reports WHERE report_id=%s"
         self.cursor.execute(query % report_id)
         self.db.commit()
+        query = "DELETE FROM labels WHERE report_id=%s"
+        self.cursor.execute(query % report_id)
+        self.db.commit()
 
 
 
