@@ -38,8 +38,12 @@ class Controller:
         self.view.report_screen.clear_bodypart_display_group.buttonClicked.connect(self.reset_single_bodypart_display_name)
         self.view.report_screen.clear_institution_display_group.buttonClicked.connect(self.reset_single_institution_display_name)
         self.view.report_screen.reset_display_names.clicked.connect(self.reset_all_display_names)
+        self.view.report_screen.garbage_can_buttons.buttonClicked.connect(self.garbage_button_clicked)
         self.view.report_screen.label_correction_button.clicked.connect(self.enter_label_correction_mode)
         self.view.report_screen.done_correction_button.clicked.connect(self.exit_label_correction_mode)
+        self.view.report_screen.multi_file_select_button.clicked.connect(self.enter_delete_mode)
+        self.view.report_screen.cancel_deletion_button.clicked.connect(self.exit_delete_mode)
+        self.view.report_screen.delete_selected_button.clicked.connect(self.multi_file_deletion)
 
         self.view.home.select_button.clicked.connect(self.patient_select_screen)
         self.view.home.quit_button.clicked.connect(self.view.close)
@@ -50,7 +54,56 @@ class Controller:
         self.view.current_dialog.cancel_button.clicked.connect(self.cancel_label_correction_dialog)
         self.view.current_dialog.done_button.clicked.connect(self.done_label_correction_dialog)
 
+        self.view.report_screen.warning_dialog.yes_button.clicked.connect(self.delete_reports_confirmed)
+        self.view.report_screen.warning_dialog.no_button.clicked.connect(self.delete_reports_cancelled)
+
         # self.view.current_dialog.dialog_closed.connect(self.cancel_label_correction_dialog)
+
+
+    def garbage_button_clicked(self, button):
+        row = self.view.report_screen.garbage_can_buttons.id(button)
+        report = self.model.prep_for_deletion([row])
+        if self.view.report_screen.dont_ask_again:
+            self.delete_reports_confirmed()
+        else:
+            self.view.report_screen.file_deletion_warning(report)
+
+    def multi_file_deletion(self):
+        self.model.files_selected_for_deletion.clear()
+        indices = self.view.report_screen.get_selected_file_indices()
+        self.model.prep_for_deletion(indices)
+        if self.view.report_screen.dont_ask_again:
+            self.delete_reports_confirmed()
+        else:
+            self.view.report_screen.file_deletion_warning(None, multi_file=True)
+
+
+    def delete_reports_confirmed(self):
+        if (not self.view.report_screen.dont_ask_again) and self.view.report_screen.warning_dialog.checkbox.isChecked():
+            self.view.report_screen.dont_ask_again = True
+        self.view.report_screen.warning_dialog.close()
+        self.view.report_screen.warning_dialog.clear()
+        self.model.delete_files()
+        self.model.files_selected_for_deletion.clear()
+        self.get_report_info_to_display()
+        self.display_report_info()
+
+    def delete_reports_cancelled(self):
+        if self.view.report_screen.warning_dialog.checkbox.isChecked():
+            self.view.report_screen.dont_ask_again = True
+        self.view.report_screen.warning_dialog.close()
+        self.view.report_screen.warning_dialog.clear()
+        self.model.files_selected_for_deletion.clear()
+
+    def enter_delete_mode(self):
+        self.model.files_selected_for_deletion.clear()
+        self.view.report_screen.enter_file_deletion_mode()
+        for checkbox in self.view.report_screen.select_file_boxes:
+            checkbox.stateChanged.connect(self.view.report_screen.update_delete_enabled_status)
+
+    def exit_delete_mode(self):
+        self.model.files_selected_for_deletion.clear()
+        self.view.report_screen.exit_file_deletion_mode()
 
     def enter_label_correction_mode(self):
         self.view.report_screen.enter_label_correction_mode()
@@ -88,6 +141,12 @@ class Controller:
         filename, isPDF, name = self.model.view_report(row, col)
         if self.model.in_label_correction_mode:
             self.view.open_label_correction_dialog(filename, name, isPDF)
+        elif self.view.report_screen.in_select_mode:
+            if self.view.report_screen.select_file_boxes[row].isChecked():
+                self.view.report_screen.select_file_boxes[row].setChecked(False)
+            else:
+                self.view.report_screen.select_file_boxes[row].setChecked(True)
+            self.view.report_screen.update_delete_enabled_status()
         else:
             if isPDF:
                 self.view.report_screen.display_pdf(filename, name, row, col)
@@ -186,7 +245,7 @@ class Controller:
     def display_report_info(self):
         self.view.set_table_row_count(self.rows, self.view.report_screen.report_table)
         self.view.report_screen.populate_report_table(self.reports)
-        if not self.model.in_label_correction_mode:
+        if not self.model.in_label_correction_mode and not self.view.report_screen.in_select_mode:
             self.view.report_screen.import_enabled(True)
         else:
             self.view.report_screen.set_table_color()

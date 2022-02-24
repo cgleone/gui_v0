@@ -42,6 +42,7 @@ class Model():
         self.set_db_functions()
         self.set_display_names()
         self.set_current_institutions()
+        self.files_selected_for_deletion = []
 
         self.in_label_correction_mode = False
 
@@ -381,10 +382,8 @@ class Model():
         file_ID = row_data[-1][0][0]
         filepath = self.db_connection.get_report_path(file_ID)[0][0]
         if filepath.split('.')[-1] == 'pdf':
-            print("this file is {} and is a pdf".format(name))
             isPDF = True
         else:
-            print("this file is {} and is not a pdf".format(name))
             isPDF = False
         return filepath, isPDF, name
 
@@ -434,7 +433,6 @@ class Model():
         if report_ids is None:
             report_ids = self.db_connection.get_all_report_ids()
         for report_id in report_ids:
-            print(report_id)
             try:
                 modality = self.db_connection.get_report_modality(report_id)[0][0]
                 bodypart = self.db_connection.get_report_bodypart(report_id)[0][0]
@@ -463,6 +461,30 @@ class Model():
     def reset_all_display_names(self, display_names_table):
         for i in range(display_names_table.rowCount()):
             display_names_table.cellWidget(i, 0).clear()
+
+    def prep_for_deletion(self, file_row_list):
+        if len(file_row_list)>1:
+            for row in file_row_list:
+                self.files_selected_for_deletion.append(row)
+            return None
+        else:
+            file_row = file_row_list[0]
+            file_display_data = self.current_display_data_with_IDs[file_row]
+            name = file_display_data[1][0][0]
+            self.files_selected_for_deletion.append(file_row)
+        return name
+
+    def delete_files(self):
+        for file_row in self.files_selected_for_deletion:
+            file_display_data = self.current_display_data_with_IDs[file_row]
+            file_ID = file_display_data[-1][0][0]
+            filepath = self.db_connection.get_report_path(file_ID)[0][0]
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            self.db_connection.delete_report_from_db(file_ID)
+
+
+
 
     def clear_searchbar(self, searchbar):
         searchbar.clear()

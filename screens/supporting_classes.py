@@ -1,6 +1,6 @@
 import os
 
-from PyQt5.QtWidgets import QWidget, QVBoxLayout
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QDialog, QHBoxLayout, QLabel, QCheckBox, QPushButton
 import PyQt5.QtWebEngineWidgets
 
 from PyQt5.QtCore import Qt, QObject, pyqtSignal
@@ -46,3 +46,40 @@ class Worker(QObject):
 
     def set_controller(self, controller):
         self.controller = controller
+
+
+class WarningDialog(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.yes_button = QPushButton("Yes")
+        self.no_button = QPushButton("No")
+        self.setLayout(QVBoxLayout())
+        self.layout().setSpacing(30)
+        self.setWindowFlag(Qt.CustomizeWindowHint)
+        self.setWindowFlag(Qt.WindowCloseButtonHint, False)
+
+    def call_dialog(self, filename, multi_file):
+        self.button_layout = QHBoxLayout()
+        if multi_file:
+            self.message = QLabel("Are you sure you want to delete all of the selected files? \nThis "
+                             "action cannot be undone".format(filename))
+        else:
+            self.message = QLabel("Are you sure you want to delete the file '{}'? \nThis "
+                             "action cannot be undone".format(filename))
+        self.message.setStyleSheet("font: bold 14px")
+        self.message.setAlignment(Qt.AlignCenter)
+
+        self.checkbox = QCheckBox("Don't ask me this again during this session")
+
+        self.button_layout.addWidget(self.no_button, alignment=Qt.AlignCenter)
+        self.button_layout.addWidget(self.yes_button, alignment=Qt.AlignCenter)
+
+        self.layout().addWidget(self.message, alignment=Qt.AlignCenter)
+        self.layout().addWidget(self.checkbox, alignment=Qt.AlignCenter)
+        self.layout().addLayout(self.button_layout)
+        self.exec()
+
+    def clear(self):
+        self.layout().removeWidget(self.message)
+        self.layout().removeWidget(self.checkbox)
+        self.layout().removeItem(self.button_layout)

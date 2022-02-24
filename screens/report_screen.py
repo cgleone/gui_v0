@@ -1,10 +1,11 @@
 import math
+import os
 
 import screens.supporting_classes as helpers
-from PyQt5.QtGui import QPixmap, QBrush, QColor, QFont
-from PyQt5.QtWidgets import QWidget, QScrollArea
+from PyQt5.QtGui import QPixmap, QBrush, QColor, QFont, QIcon
+from PyQt5.QtWidgets import QWidget, QScrollArea, QGroupBox
 from PIL import Image
-from PyQt5.QtCore import Qt, QThread, QRect
+from PyQt5.QtCore import Qt, QThread, QRect, QSize, QModelIndex
 
 from PyQt5.QtWidgets import QGridLayout, QLabel, QToolBar, QStatusBar, QDialog, QTableWidgetItem, QHeaderView, \
     QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox, \
@@ -34,6 +35,10 @@ class ReportScreen(QWidget):
         self.cell_hover_colour = '#E0EEEE'
 
         self.thread_is_running = False
+        self.in_select_mode = False
+        self.dont_ask_again = False
+        self.warning_dialog = helpers.WarningDialog()
+        self.select_file_boxes = []
 
     def create_layouts(self):
         self.vertical_main = QVBoxLayout()
@@ -56,7 +61,6 @@ class ReportScreen(QWidget):
 
         self.empty_grey_widgets = [QWidget(), QWidget(), QWidget(), QWidget()]
         for widget in self.empty_grey_widgets:
-            widget.setStyleSheet("background-color=blue")
             widget.setFixedHeight(30)
 
 
@@ -72,6 +76,7 @@ class ReportScreen(QWidget):
     def create_table_grid(self, current_categories):
         self.report_table = QTableWidget()
         self.report_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.report_table.setSelectionMode(QAbstractItemView.NoSelection)
         self.report_table.setMouseTracking(True)
 
         header_font = QFont()
@@ -88,24 +93,43 @@ class ReportScreen(QWidget):
         self.report_table.cellEntered.connect(self.cell_hover)
 
     def create_table_columns(self, current_categories):
-        self.column_count = len(current_categories)
+        self.column_count = len(current_categories) + 1 # add one for the garbage cans
         self.report_table.setColumnCount(self.column_count)
-        # self.report_table.setHorizontalHeaderLabels(['Date Added', 'File Name', 'Imaging Modality', 'Body Part', 'Notes'])
-        self.report_table.setHorizontalHeaderLabels(current_categories)
-        self.report_table.horizontalHeader().setStretchLastSection(True)
-        # self.report_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.report_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        # self.report_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        # self.report_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.report_table.setHorizontalHeaderLabels(current_categories + [''])
+
+        for i in range(len(current_categories)):
+            column_header = current_categories[i]
+            if column_header != "Notes" and column_header != "Institution" and column_header != "File Name":
+                self.report_table.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
+            elif column_header == "Notes":
+                self.report_table.horizontalHeader().setSectionResizeMode(i, QHeaderView.Fixed)
+                self.report_table.horizontalHeader().resizeSection(i, 250)
+            elif column_header == "Institution":
+                self.report_table.horizontalHeader().setSectionResizeMode(i, QHeaderView.Fixed)
+                self.report_table.horizontalHeader().resizeSection(i, 250)
+            else: # file name
+                self.report_table.horizontalHeader().setSectionResizeMode(i, QHeaderView.Stretch)
+        self.report_table.horizontalHeader().setSectionResizeMode(self.column_count-1, QHeaderView.Fixed)
+        self.report_table.horizontalHeader().resizeSection(self.column_count-1, 40)
+        self.report_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
+        self.report_table.horizontalHeader().resizeSection(0, 100)
+
 
     def cell_hover(self, row):
+
         underlined = QFont()
         underlined.setUnderline(True)
         normal = QFont()
-        self.report_table.setCursor(Qt.PointingHandCursor)
+        if not self.in_select_mode:
+            self.report_table.setCursor(Qt.PointingHandCursor)
+            columns_for_highlighting = self.column_count-1
+        else:
+            self.report_table.setCursor(Qt.ArrowCursor)
+            columns_for_highlighting = self.column_count
+            self.cell_hover_colour = '#c7c7c7'
 
         col = 0
-        for i in range(0, self.column_count):
+        for i in range(0, columns_for_highlighting):
             item = self.report_table.item(row, col)
             old_item = self.report_table.item(self.current_hover[0], col)
             if self.current_hover != [row]:
@@ -113,15 +137,23 @@ class ReportScreen(QWidget):
                     old_item.setBackground(QBrush(QColor('white')))
                     old_item.setFont(normal)
                     item.setBackground(QBrush(QColor(self.cell_hover_colour)))
-                    item.setFont(underlined)
+                    if not self.in_select_mode:
+                        item.setFont(underlined)
                 except:
                     item.setBackground(QBrush(QColor(self.cell_hover_colour)))
-                    item.setFont(underlined)
+                    if not self.in_select_mode:
+                        item.setFont(underlined)
                     print("problem caught")
             col = col + 1
         self.current_hover = [row]
 
+    def clear_garbage_and_checks(self):
+        self.select_file_boxes.clear()
+        for button in self.garbage_can_buttons.buttons():
+            self.garbage_can_buttons.removeButton(button)
+
     def populate_report_table(self, report_data):
+        self.clear_garbage_and_checks()
         if report_data is None:
             return
         for i in range(len(report_data)):
@@ -129,6 +161,52 @@ class ReportScreen(QWidget):
             for j in range(len(row_data)):
                 cell_data = row_data[j][0][0]
                 self.report_table.setItem(i, j, QTableWidgetItem(cell_data))
+
+            if self.in_select_mode:
+                layout = QHBoxLayout()
+                widget = QWidget()
+                widget.setLayout(layout)
+                checkbox = QCheckBox()
+                layout.addWidget(checkbox)
+                self.report_table.setCellWidget(i, len(row_data), widget)
+                self.select_file_boxes.append(checkbox)
+
+            else:
+                garbage_can = QIcon(os.path.join('icons', 'delete.png'))
+                del_button = QPushButton()
+                del_button.setIcon(garbage_can)
+                del_button.setStyleSheet("background-color: #bfbfbf; border-color: white; padding: 1px")
+                self.report_table.setCellWidget(i, len(row_data), del_button)
+                self.garbage_can_buttons.addButton(del_button, i)
+
+    def populate_last_column(self):
+        self.clear_garbage_and_checks()
+        row_count = self.report_table.rowCount()
+        column_count = self.report_table.columnCount()
+        for i in range(row_count):
+            # self.report_table.cellWidget(i, row_count).hide()
+            # self.report_table.removeCellWidget(i, row_count)
+            self.report_table.setItem(i, column_count-1, QTableWidgetItem(''))
+
+            if self.in_select_mode:
+                layout = QHBoxLayout()
+                widget = QWidget()
+                widget.setLayout(layout)
+                checkbox = QCheckBox()
+                layout.addWidget(checkbox)
+                # checkbox.setStyleSheet("QCheckBox::indicator {border: 1px solid gray}")
+                self.report_table.setCellWidget(i, column_count-1, widget)
+                self.select_file_boxes.append(checkbox)
+
+            else:
+                garbage_can = QIcon(os.path.join('icons', 'delete.png'))
+                del_button = QPushButton()
+                del_button.setIcon(garbage_can)
+                del_button.setStyleSheet("background-color: #bfbfbf; border-color: white; padding: 1px")
+                self.report_table.setCellWidget(i, column_count-1, del_button)
+                self.garbage_can_buttons.addButton(del_button, i)
+
+
 
     def populate_title_layout(self):
         # self.title_layout.addWidget(QLabel("Patient Portal Demo"))
@@ -147,10 +225,12 @@ class ReportScreen(QWidget):
         self.settings_layout.addWidget(self.settings_button)
 
     def populate_label_correction_layout(self):
-        self.label_correction_layout.addWidget(self.label_correction_button, 0, alignment=Qt.AlignRight)
+        self.label_correction_layout.addWidget(self.multi_file_select_button, 0, alignment=Qt.AlignLeft)
+        self.label_correction_layout.addWidget(self.label_correction_button, 1, alignment=Qt.AlignRight)
 
     def enter_label_correction_mode(self):
         self.label_correction_layout.removeWidget(self.label_correction_button)
+        self.label_correction_layout.removeWidget(self.multi_file_select_button)
         self.label_correction_button.hide()
         self.label_correction_layout.addWidget(self.correction_instructions, 0, alignment=Qt.AlignLeft)
         self.label_correction_layout.addWidget(self.done_correction_button, 1, alignment=Qt.AlignRight)
@@ -160,12 +240,83 @@ class ReportScreen(QWidget):
         self.label_correction_frame.setStyleSheet("background-color: white")
         self.enable_actions(False)
 
+    def enter_file_deletion_mode(self):
+        self.label_correction_layout.removeWidget(self.label_correction_button)
+        self.label_correction_layout.removeWidget(self.multi_file_select_button)
+        self.label_correction_button.hide()
+        self.multi_file_select_button.hide()
+        self.label_correction_layout.addWidget(self.cancel_deletion_button, 0, alignment=Qt.AlignLeft)
+        self.label_correction_layout.addWidget(self.delete_selected_button, 1, alignment=Qt.AlignRight)
+        self.cancel_deletion_button.show()
+        self.delete_selected_button.show()
+        self.cell_hover_colour = '#fc9992'
+        self.label_correction_frame.setStyleSheet("background-color: white")
+        # for garbage_can in self.garbage_can_buttons.buttons():
+        #     garbage_can.setEnabled(False)
+        self.in_select_mode = True
+        self.populate_last_column()
+        self.update_delete_enabled_status()
+        self.enable_actions(False)
+
+    def update_delete_enabled_status(self):
+        if any(box.isChecked() for box in self.select_file_boxes):
+            self.delete_selected_button.setEnabled(True)
+            self.delete_selected_button.setStyleSheet("color: white; "
+                                                      "background-color: green; "
+                                                      "font: bold 14px;"
+                                                      "border-style: outset; "
+                                                      "border-width: 2px; "
+                                                      "border-radius: 10px;"
+                                                      "border-color: black; "
+                                                      "font: bold 14px; "
+                                                      "min-width: 10em; "
+                                                      "padding: 6px;")
+        else:
+            self.delete_selected_button.setEnabled(False)
+            self.delete_selected_button.setStyleSheet("color: black; "
+                                                      "background-color: #7d9479; "
+                                                      "font: bold 14px;"
+                                                      "border-style: outset; "
+                                                      "border-width: 2px; "
+                                                      "border-radius: 10px;"
+                                                      "border-color: black; "
+                                                      "font: bold 14px; "
+                                                      "min-width: 10em; "
+                                                      "padding: 6px;")
+
+    def exit_file_deletion_mode(self):
+        self.label_correction_layout.removeWidget(self.cancel_deletion_button)
+        self.label_correction_layout.removeWidget(self.delete_selected_button)
+        self.cancel_deletion_button.hide()
+        self.delete_selected_button.hide()
+        self.label_correction_layout.addWidget(self.multi_file_select_button, 0, alignment=Qt.AlignLeft)
+        self.label_correction_layout.addWidget(self.label_correction_button, 1, alignment=Qt.AlignRight)
+        self.label_correction_button.show()
+        self.multi_file_select_button.show()
+        self.cell_hover_colour = '#E0EEEE'
+        self.report_table.setStyleSheet("")
+        self.label_correction_frame.setStyleSheet("")
+        for garbage_can in self.garbage_can_buttons.buttons():
+            garbage_can.setEnabled(True)
+        self.in_select_mode = False
+        self.populate_last_column()
+        self.enable_actions(True)
+
+    def get_selected_file_indices(self):
+        indices = []
+        for i in range(len(self.select_file_boxes)):
+            if self.select_file_boxes[i].isChecked():
+                indices.append(i)
+        return indices
+
+
     def exit_label_correction_mode(self):
         self.label_correction_layout.removeWidget(self.correction_instructions)
         self.label_correction_layout.removeWidget(self.done_correction_button)
         self.correction_instructions.hide()
         self.done_correction_button.hide()
-        self.label_correction_layout.addWidget(self.label_correction_button, 0, alignment=Qt.AlignRight)
+        self.label_correction_layout.addWidget(self.multi_file_select_button, 0, alignment=Qt.AlignLeft)
+        self.label_correction_layout.addWidget(self.label_correction_button, 1, alignment=Qt.AlignRight)
         self.label_correction_button.show()
         self.cell_hover_colour = '#E0EEEE'
         self.report_table.setStyleSheet("")
@@ -204,9 +355,21 @@ class ReportScreen(QWidget):
         self.clear_modality_display_group = QButtonGroup()
         self.clear_bodypart_display_group = QButtonGroup()
         self.clear_institution_display_group = QButtonGroup()
+        self.garbage_can_buttons = QButtonGroup()
         self.reset_display_names = QPushButton("Reset All")
         self.label_correction_button = QPushButton("Enter Label Correction Mode")
         self.label_correction_button.setStyleSheet("color: white; "
+                                                   "background-color: #8b0000; "
+                                                   "font: bold 14px;"
+                                                   "border-style: outset; "
+                                                   "border-width: 2px; "
+                                                   "border-radius: 10px;"
+                                                   "border-color: black; "
+                                                   "font: bold 14px; "
+                                                   "min-width: 10em; "
+                                                   "padding: 6px;")
+        self.multi_file_select_button = QPushButton("Select Files for Deletion")
+        self.multi_file_select_button.setStyleSheet("color: white; "
                                                    "background-color: #8b0000; "
                                                    "font: bold 14px;"
                                                    "border-style: outset; "
@@ -229,6 +392,31 @@ class ReportScreen(QWidget):
                                                   "min-width: 10em; "
                                                   "padding: 6px;")
 
+        self.delete_selected_button = QPushButton("Delete Selected Files")
+        self.delete_selected_button.setStyleSheet("color: white; "
+                                                  "background-color: green; "
+                                                  "font: bold 14px;"
+                                                  "border-style: outset; "
+                                                  "border-width: 2px; "
+                                                  "border-radius: 10px;"
+                                                  "border-color: black; "
+                                                  "font: bold 14px; "
+                                                  "min-width: 10em; "
+                                                  "padding: 6px;")
+
+        self.cancel_deletion_button = QPushButton("Cancel")
+        self.cancel_deletion_button.setStyleSheet("color: white; "
+                                                   "background-color: #8b0000; "
+                                                   "font: bold 14px;"
+                                                   "border-style: outset; "
+                                                   "border-width: 2px; "
+                                                   "border-radius: 10px;"
+                                                   "border-color: black; "
+                                                   "font: bold 14px; "
+                                                   "min-width: 10em; "
+                                                   "padding: 6px;")
+
+
         self.all_buttons = [self.filter_button, self.go_button, self.settings_button, self.reset_display_names,
                             self.dialog_button, self.back_button, self.main_menu_button, self.import_button]
 
@@ -236,14 +424,15 @@ class ReportScreen(QWidget):
         self.report_table.setStyleSheet("")
 
         for row in range(self.report_table.rowCount()):
-            for col in range(0, self.column_count):
+            for col in range(0, self.column_count - 1):
                 item = self.report_table.item(row, col)
                 item.setBackground(QBrush(QColor('white')))
         self.report_table.horizontalHeader().setStyleSheet("background-color: white")
-        self.report_table.setStyleSheet("border-style: outset; "
-                                                  "border-width: 2px; "
-                                                  "border-radius: 1px;"
-                                                  "border-color: black;")
+        if not self.in_select_mode:
+            self.report_table.setStyleSheet("border-style: outset; "
+                                                      "border-width: 2px; "
+                                                      "border-radius: 1px;"
+                                                      "border-color: black;")
 
 
     def create_user_inputs(self):
@@ -457,9 +646,13 @@ class ReportScreen(QWidget):
             self.filters_layout.addWidget(QLabel(active_filters[i]))
         self.filters_layout.addWidget(self.clear_filters_button)
 
+    def file_deletion_warning(self, filename, multi_file=False):
+        self.warning_dialog.call_dialog(filename, multi_file)
+
+
+
+
     def display_pdf(self, filename, report_name, row, col):
-        item = self.report_table.item(row, col)
-        item.setBackground(QBrush(QColor('white')))
 
         viewer = helpers.ReportViewer(filename)
         try:

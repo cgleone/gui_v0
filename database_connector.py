@@ -224,6 +224,12 @@ class DB_Connection:
         self.cursor.execute(query)
         self.db.commit()
 
+    def delete_report_from_db(self, report_id):
+        query = "DELETE FROM reports WHERE report_id=%s"
+        self.cursor.execute(query % report_id)
+        self.db.commit()
+
+
 
 
 
