@@ -82,12 +82,9 @@ class NerModel(TrainingModel):
         dict
             self.metrics dictionary
         """
-        # Transform dataframe into pytorch datasets for training and validation
-        tr_df = self.preprocess(training_data, generate_labels=True)
-        val_df = self.preprocess(validation_data, generate_labels=True)
         # Transform pytorch datasets into dataloaders
-        tr_dataloader = df_to_dataloader(tr_df, self.tokenizer, self.tokenizer_params, self.batch_size)
-        val_dataloader = df_to_dataloader(val_df, self.tokenizer, self.tokenizer_params, self.batch_size)
+        tr_dataloader = df_to_dataloader(training_data, self.tokenizer, self.tokenizer_params, self.batch_size)
+        val_dataloader = df_to_dataloader(validation_data, self.tokenizer, self.tokenizer_params, self.batch_size)
 
         for epoch in range(self.epochs):
             train_metrics = self._train(tr_dataloader, epoch)
