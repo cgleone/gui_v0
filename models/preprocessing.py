@@ -127,6 +127,8 @@ def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path):
     Creates SQuAD formatted training data from a given snapshot. First it splits the documents by token lenghth,
     and then finds the true text in the contents of the reports and saves the SQuAD format QA pairs into a JSON file.
 
+    Returns: Data in SQuAD format (that was saved to the JSON file) 
+
     Parameters
     ----------
     snapshot : dict of Documents
@@ -216,6 +218,60 @@ def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path):
 
     with open(json_save_path, 'w') as f:
         json.dump(train_squad_data, f)
+
+    return train_squad_data
+
+def qa_preprocess_docs(snapshot, tokenizer, max_seq_len):
+    """
+    Creates haystack documents from a given snapshot. First it splits the documents by token length,
+    then it converts each to a haystack type doc,
+
+    Returns: Haystack Documents
+
+    Parameters
+    ----------
+    snapshot : dict of Documents
+        Data to be used
+    tokenizer: transformers.Tokenizer
+        Tokenizer associated with intended model
+    max_seq_len: int
+        Maximum token sequence length for transformers model
+
+
+    """
+
+    from haystack import Document
+    data = text_split_preprocess(snapshot, tokenizer, max_seq_len=max_seq_len)
+    
+    data['id_search'] = data['id']
+
+    for index, row in data.iterrows():
+        searchId = row['id']
+        searchId = searchId[0:-2]
+        data['id_search'][index] = searchId
+
+    haystack_docs = []
+    for key, doc in snapshot.items():
+        relevant_labels = doc.get_labels_to_classify()
+
+        relevant_data = data.loc[data['id_search'] == key]
+        
+
+        for idx, row in relevant_data.iterrows():
+            print(row)
+            haystack_doc = Document(content = row['text'], 
+               meta = {
+                   'name': row['id']
+                #    'date_taken': relevant_labels['Date Taken']['label'],
+                #    'dr_name': relevant_labels['Doctor Name']['label'],
+                #    'clinic_name': relevant_labels['Clinic Name']['label'],
+                #    'body_part': relevant_labels['Body Part']['label'],
+                #    'modality': relevant_labels['Modality']['label']
+                   })
+            haystack_docs.append(haystack_doc)
+
+    return haystack_docs
+
 
 
 def text_split_preprocess(snapshot, tokenizer, max_seq_len=512, stride=10):
