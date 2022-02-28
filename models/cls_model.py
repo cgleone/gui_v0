@@ -1,16 +1,16 @@
 from models.training_model_api import TrainingModel
-from models.preprocessing import get_iob_entity_encoding, ner_preprocess, text_split_preprocess, df_to_dataloader, glob_to_snapshot
+from models.preprocessing import get_iob_entity_encoding, cls_preprocess, text_split_preprocess, df_to_dataloader, glob_to_snapshot
 from models.preprocessing import entity_labels
-from transformers import AutoTokenizer, BertForTokenClassification
+from transformers import AutoTokenizer, BertForSequenceClassification
 from sklearn.metrics import accuracy_score, confusion_matrix
-from sklearn.model_selection import train_test_split
 from seqeval.metrics import classification_report
 import torch
 from models.utils import generate_default_parameters
 
-class NerModel(TrainingModel):
+
+class ClsModel(TrainingModel):
     """
-    Model for training on Named Entity Recognition task
+    Model for training on Clasification task
     """
 
     def __init__(self):
@@ -26,9 +26,7 @@ class NerModel(TrainingModel):
             parameters dictionary, model.__getattr__ will try to look here if the name doesn't exist in self.__dict__
         """
         super().set_parameters(parameters)
-        # Set number of labels
-        self.parameters['entity_encoding'] = get_iob_entity_encoding(entity_labels)
-        self.parameters['num_labels'] = len(self.entity_encoding) - 1  # Don't count the 'X' label
+        self.parameters['num_labels'] = 5
 
         # Check if we should use cuda
         if self.use_cuda and torch.cuda.is_available():
@@ -42,7 +40,7 @@ class NerModel(TrainingModel):
 
     def _init_nn(self):
         """Initialize the PyTorch BERT nn and put onto device"""
-        self.nn = BertForTokenClassification.from_pretrained(self.base_model_url, num_labels=self.num_labels)
+        self.nn = BertForSequenceClassification.from_pretrained(self.base_model_url, num_labels=self.num_labels)
         self.nn.to(self.device)
         return self.nn
 
@@ -62,13 +60,15 @@ class NerModel(TrainingModel):
         pd.DataFrame
             Data transformed into dataframe with keys for ['text', 'id'] and ['label'] if labels are generated
         """
-        if generate_labels:
-            df = ner_preprocess(data_snapshot, self.tokenizer, self.entity_labels, self.max_seq_len, self.stride)
-        else:
-            df = text_split_preprocess(data_snapshot, self.tokenizer, self.max_seq_len, self.stride)
+        # if generate_labels:
+        #     df = ner_preprocess(data_snapshot, self.tokenizer, self.entity_labels, self.max_seq_len, self.stride)
+        # else:
+        #     df = text_split_preprocess(data_snapshot, self.tokenizer, self.max_seq_len, self.stride)
+        df = cls_preprocess(data_snapshot, self.tokenizer, 'Modality')
         return df
 
-    def train(self, training_data, validation_data):
+
+    def train(self, tr_df, val_df):
         """Train the model based on the input parameters
         Trains self.nn for specified number of epochs, generates training and validation metrics
 
@@ -85,8 +85,8 @@ class NerModel(TrainingModel):
             self.metrics dictionary
         """
         # Transform pytorch datasets into dataloaders
-        tr_dataloader = df_to_dataloader(training_data, self.tokenizer, self.tokenizer_params, self.batch_size)
-        val_dataloader = df_to_dataloader(validation_data, self.tokenizer, self.tokenizer_params, self.batch_size)
+        tr_dataloader = df_to_dataloader(tr_df, self.tokenizer, self.tokenizer_params, self.batch_size)
+        val_dataloader = df_to_dataloader(val_df, self.tokenizer, self.tokenizer_params, self.batch_size)
 
         for epoch in range(self.epochs):
             train_metrics = self._train(tr_dataloader, epoch)
@@ -121,6 +121,7 @@ class NerModel(TrainingModel):
         # Put model in training mode
         self.nn.train()
         for idx, batch in enumerate(train_dataloader):
+            print("hi")
             ids = batch['input_ids'].to(self.device, dtype=torch.long)
             mask = batch['attention_mask'].to(self.device, dtype=torch.long)
             labels = batch['label'].to(self.device, dtype=torch.long)
@@ -133,7 +134,7 @@ class NerModel(TrainingModel):
             nb_tr_steps += 1
             nb_tr_examples += labels.size(0)
 
-            if idx % 100 == 0:
+            if idx % 1 == 0:
                 loss_step = tr_loss / nb_tr_steps
                 print(f"Epoch {epoch}: Training loss per 100 training steps: {loss_step}")
 
@@ -234,18 +235,18 @@ class NerModel(TrainingModel):
 
         cm = confusion_matrix(labels, predictions)
         # Get accuracy report of just tags
-        entity_encoding = self.entity_encoding
-        labels_to_tags = {v: k for k, v in entity_encoding.items()}
-        labels = [labels_to_tags[x] for x in labels]
-        predictions = [labels_to_tags[x] for x in predictions]
-        report = classification_report([labels], [predictions], digits=4)
+        # entity_encoding = self.entity_encoding
+        # labels_to_tags = {v: k for k, v in entity_encoding.items()}
+        # labels = [labels_to_tags[x] for x in labels]
+        # predictions = [labels_to_tags[x] for x in predictions]
+        # report = classification_report([labels], [predictions], digits=4)
         # Total loss and accuracy
         eval_loss = eval_loss / nb_eval_steps
         eval_accuracy = eval_accuracy / nb_eval_steps
         metrics = {
             'epoch': epoch,
             'confusion_matrix': cm,
-            'iob_tag_report': report,
+            # 'iob_tag_report': report,
             'loss': eval_loss,
             'accuracy': eval_accuracy
         }
@@ -264,14 +265,20 @@ class NerModel(TrainingModel):
 
 
 def test_model():
-    model = NerModel()
+    model = ClsModel()
     model.set_parameters(generate_default_parameters())
-    snapshots = glob_to_snapshot("/Users/thomasfortin/Desktop/School/4A/BME 461/DataSynthesis/Synthesized_Data", extra_level=True)
-    data = model.preprocess(snapshots)
-    train = data.sample(frac=0.8)
-    test = data.drop(train.index)
-    print(model.train(train.reset_index(), test.reset_index()))
+    data_snapshot = glob_to_snapshot("/Users/thomasfortin/Desktop/School/4A/BME 461/DataSynthesis/Synthesized_Data", extra_level=True)
+    df = model.preprocess(data_snapshot)
+    df = df.sample(frac=.01)
+    training = df.sample(frac=.8)
+    test = df.drop(training.index)
+
+    result = model.train(training.reset_index(), test.reset_index())
+    return result, model
+
+
 
 
 if __name__=="__main__":
-    test_model()
+    result, model = test_model()
+    print(result)
