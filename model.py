@@ -32,6 +32,9 @@ class Model():
         self.modality_display_names = None
         self.bodypart_display_names = None
         self.current_institutions = {}
+        self.corrected_row = None
+        self.corrected_ID = None
+        self.current_report_labels = None
 
         self.set_current_patient_ID(22)
         self.set_current_physician_ID(1)
@@ -112,7 +115,7 @@ class Model():
                              ">5yrs": "< date_sub(now(), interval 5 year)"}
 
     def set_default_categories(self):
-        self.current_categories = ["Exam Date", "File Name", "Imaging Modality", "Body Part", "Notes"]
+        self.current_categories = ["Exam Date", "File Name", "Imaging Modality", "Body Part", "Institution", "Clinician"]
 
     def set_db_functions(self):
         self.db_functions = {"Exam Date": self.db_connection.get_report_date,
@@ -186,8 +189,9 @@ class Model():
         label_args = [self.current_patient_ID, report_id] + labels
         return label_args
 
-    def deal_with_institution(self, report_id):
-        institution = self.db_connection.get_report_institution(report_id)[0][0]
+    def deal_with_institution(self, report_id, institution = None):
+        if institution == None:
+            institution = self.db_connection.get_report_institution(report_id)[0][0]
         is_Existing_Institution = institution in self.current_institutions.keys()
         if not is_Existing_Institution:
             self.db_connection.add_institution(institution, self.current_physician_ID)
@@ -385,7 +389,7 @@ class Model():
             isPDF = True
         else:
             isPDF = False
-        return filepath, isPDF, name
+        return filepath, isPDF, name, file_ID
 
 
     def determine_checked_categories(self, category_list):
@@ -483,11 +487,36 @@ class Model():
                 os.remove(filepath)
             self.db_connection.delete_report_from_db(file_ID)
 
-
+    def get_current_report_labels(self, report_ID):
+        self.current_report_labels = [self.db_connection.get_report_modality(report_ID)[0][0],
+                                 self.db_connection.get_report_bodypart(report_ID)[0][0],
+                                 self.db_connection.get_report_institution(report_ID)[0][0],
+                                 self.db_connection.get_report_clinician(report_ID)[0][0],
+                                 self.db_connection.get_report_date(report_ID)[0][0]]
+        return self.current_report_labels
 
 
     def clear_searchbar(self, searchbar):
         searchbar.clear()
+
+    def store_table_row_and_fileID(self, row, file_ID):
+        self.corrected_row = row
+        self.corrected_ID = file_ID
+
+    def determine_corrections(self, modality, bodypart, institution, clinician, date):
+        categories = ["Modality", "Bodypart", "Institution", "clinician", "Exam_Date"]
+        potentially_fixed_labels = [modality.currentText(), bodypart.currentText(), institution.text(), clinician.text(),
+                                    date.date().toString(Qt.ISODate)]
+
+        for i in range(len(categories)):
+            if self.current_report_labels[i] != potentially_fixed_labels[i]:
+                self.db_connection.update_label_table(categories[i], potentially_fixed_labels[i], self.corrected_ID)
+
+        self.deal_with_institution(self.corrected_ID, institution.text())
+
+
+
+
 
 
 

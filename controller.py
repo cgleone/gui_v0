@@ -122,6 +122,14 @@ class Controller:
 
     def done_label_correction_dialog(self):
         # save the new labels here!
+        self.model.determine_corrections(self.view.current_dialog.modality_dropdown,
+                                         self.view.current_dialog.bodypart_dropdown,
+                                         self.view.current_dialog.institution_text,
+                                         self.view.current_dialog.clinician_text,
+                                         self.view.current_dialog.date_picker)
+        # self.model.update_db_with_corrections()
+        self.get_report_info_to_display()
+        self.display_report_info()
         self.view.close_label_correction_dialog()
 
     def patient_select_screen(self):
@@ -138,9 +146,11 @@ class Controller:
         self.view.go_to_report_screen()
 
     def report_clicked(self, row, col):
-        filename, isPDF, name = self.model.view_report(row, col)
+        filename, isPDF, name, report_ID = self.model.view_report(row, col)
         if self.model.in_label_correction_mode:
-            self.view.open_label_correction_dialog(filename, name, isPDF)
+            report_labels = self.model.get_current_report_labels(report_ID)
+            self.model.store_table_row_and_fileID(row, report_ID)
+            self.view.open_label_correction_dialog(filename, name, isPDF, report_labels)
         elif self.view.report_screen.in_select_mode:
             if self.view.report_screen.select_file_boxes[row].isChecked():
                 self.view.report_screen.select_file_boxes[row].setChecked(False)
