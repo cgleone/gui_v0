@@ -64,7 +64,7 @@ class CorrectLabelDialog(QDialog):
         self.button_layout.addWidget(self.done_button)
 
         self.modalities = ["X-ray", "MRI", "CT", "Ultrasound"]
-        self.body_parts = ["Head and neck", "Chest", "Abdomen", "Upper Limbs", "Lower Limbs", "Other"]
+        self.body_parts = ["Head and Neck", "Chest", "Abdomen", "Upper Limbs", "Lower Limbs", "Other"]
         self.label_corrections_layout = QGridLayout()
         self.populate_label_corrections_layout()
 

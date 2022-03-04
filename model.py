@@ -507,12 +507,26 @@ class Model():
         categories = ["Modality", "Bodypart", "Institution", "clinician", "Exam_Date"]
         potentially_fixed_labels = [modality.currentText(), bodypart.currentText(), institution.text(), clinician.text(),
                                     date.date().toString(Qt.ISODate)]
-
+        self.changes_applied = False
         for i in range(len(categories)):
             if self.current_report_labels[i] != potentially_fixed_labels[i]:
                 self.db_connection.update_label_table(categories[i], potentially_fixed_labels[i], self.corrected_ID)
+                self.changes_applied = True
 
         self.deal_with_institution(self.corrected_ID, institution.text())
+
+
+    def determine_if_searched(self, active_filters_layout):
+        if active_filters_layout.count() == 0:
+            return False
+        else: return True
+
+    def determine_if_searchbar(self, searchbar):
+        if searchbar.text() == "":
+            return False
+        else: return True
+
+
 
 
 

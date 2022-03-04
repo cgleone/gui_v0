@@ -5,7 +5,7 @@ import screens.supporting_classes as helpers
 from PyQt5.QtGui import QPixmap, QBrush, QColor, QFont, QIcon
 from PyQt5.QtWidgets import QWidget, QScrollArea, QGroupBox
 from PIL import Image
-from PyQt5.QtCore import Qt, QThread, QRect, QSize, QModelIndex
+from PyQt5.QtCore import Qt, QThread, QRect, QSize, QModelIndex, QTimer
 
 from PyQt5.QtWidgets import QGridLayout, QLabel, QToolBar, QStatusBar, QDialog, QTableWidgetItem, QHeaderView, \
     QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox, \
@@ -22,6 +22,9 @@ class ReportScreen(QWidget):
         self.correction_instructions = QLabel("Click on a report to edit its labels")
         self.correction_instructions.setStyleSheet("color: #8b0000; font: bold 18px;")
         self.no_results.setHidden(True)
+        self.successful_update = QLabel("Successfully applied changes.")
+        self.successful_update.setHidden(True)
+        self.successful_update.setStyleSheet("color: green")
 
         self.grey_widget = QLabel(" ")
         self.grey_widget.setStyleSheet("background-color: rgba(0, 0, 0, 10);")
@@ -233,6 +236,7 @@ class ReportScreen(QWidget):
         self.label_correction_layout.removeWidget(self.multi_file_select_button)
         self.label_correction_button.hide()
         self.label_correction_layout.addWidget(self.correction_instructions, 0, alignment=Qt.AlignLeft)
+        self.label_correction_layout.addWidget(self.successful_update, 1, alignment=Qt.AlignCenter)
         self.label_correction_layout.addWidget(self.done_correction_button, 1, alignment=Qt.AlignRight)
         self.done_correction_button.show()
         self.correction_instructions.show()
@@ -704,6 +708,17 @@ class ReportScreen(QWidget):
             dialog_layout.addWidget(frame)
 
         dialog.exec()
+
+    def show_db_was_updated(self):
+        self.successful_update.setHidden(False)
+        timer = QTimer()
+        timer.setSingleShot(True)
+        timer.singleShot(3000, self.hide_message)
+
+    def hide_message(self):
+        self.successful_update.setHidden(True)
+
+
 
     def create_thread(self, controller):
         self.thread = QThread()
