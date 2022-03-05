@@ -1,11 +1,10 @@
-from models.training_model_api import TrainingModel
-from models.preprocessing import get_iob_entity_encoding, cls_preprocess, text_split_preprocess, df_to_dataloader, glob_to_snapshot
-from models.preprocessing import entity_labels
+from .training_model_api import TrainingModel
+from .preprocessing import cls_preprocess, text_split_preprocess, df_to_dataloader, glob_to_snapshot
+from .preprocessing import entity_labels
 from transformers import AutoTokenizer, BertForSequenceClassification
 from sklearn.metrics import accuracy_score, confusion_matrix
-from seqeval.metrics import classification_report
 import torch
-from models.utils import generate_default_parameters
+from .utils import generate_default_parameters
 
 
 class ClsModel(TrainingModel):
@@ -60,13 +59,11 @@ class ClsModel(TrainingModel):
         pd.DataFrame
             Data transformed into dataframe with keys for ['text', 'id'] and ['label'] if labels are generated
         """
-        # if generate_labels:
-        #     df = ner_preprocess(data_snapshot, self.tokenizer, self.entity_labels, self.max_seq_len, self.stride)
-        # else:
-        #     df = text_split_preprocess(data_snapshot, self.tokenizer, self.max_seq_len, self.stride)
-        df = cls_preprocess(data_snapshot, self.tokenizer, 'Modality')
+        if generate_labels:
+            df = cls_preprocess(data_snapshot, self.tokenizer, 'Modality')
+        else:
+            df = text_split_preprocess(data_snapshot, self.tokenizer, self.max_seq_len, self.stride)
         return df
-
 
     def train(self, tr_df, val_df):
         """Train the model based on the input parameters
@@ -277,8 +274,6 @@ def test_model():
     return result, model
 
 
-
-
-if __name__=="__main__":
+if __name__ == "__main__":
     result, model = test_model()
     print(result)
