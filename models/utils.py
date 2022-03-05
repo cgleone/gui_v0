@@ -22,13 +22,13 @@ def generate_default_parameters(
     batch_size : int, optional
         batch size for training, by default 4
     learning_rate : float, optional
-        learning rate for optimizer, by default 1e-5
+        learning rate for optimizer, by default 1e-6
     max_grad_norm : int, optional
         maximum gradient to clip during backprop, by default 10
     random_seed : int, optional
         random seed for numpy and pytorch random number generators, by default 42
     epochs : int, optional
-        number of epochs to train, by default 1
+        number of epochs to train, by default 5
     tokenizer_url : str, optional
         huggingface url to construct pretrained tokenizer, by default 'emilyalsentzer/Bio_ClinicalBERT'
     base_model_url : str, optional
