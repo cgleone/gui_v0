@@ -15,7 +15,7 @@ farm-haystack
 thefuzz
 
 # Models
-en-core-sci-md
+# en-core-sci-md
 
 # Misc
 dateparser
