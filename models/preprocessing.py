@@ -167,7 +167,7 @@ def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path):
     Creates SQuAD formatted training data from a given snapshot. First it splits the documents by token lenghth,
     and then finds the true text in the contents of the reports and saves the SQuAD format QA pairs into a JSON file.
 
-    Returns: Data in SQuAD format (that was saved to the JSON file) 
+    Returns: Data in SQuAD format (that was saved to the JSON file)
 
     Parameters
     ----------
@@ -279,10 +279,9 @@ def qa_preprocess_docs(snapshot, tokenizer, max_seq_len):
 
 
     """
-
     from haystack import Document
     data = text_split_preprocess(snapshot, tokenizer, max_seq_len=max_seq_len)
-    
+
     data['id_search'] = data['id']
 
     for index, row in data.iterrows():
@@ -295,23 +294,22 @@ def qa_preprocess_docs(snapshot, tokenizer, max_seq_len):
         relevant_labels = doc.get_labels_to_classify()
 
         relevant_data = data.loc[data['id_search'] == key]
-        
 
         for idx, row in relevant_data.iterrows():
             print(row)
-            haystack_doc = Document(content = row['text'], 
-               meta = {
+            haystack_doc = Document(
+                content=row['text'],
+                meta={
                    'name': row['id']
                 #    'date_taken': relevant_labels['Date Taken']['label'],
                 #    'dr_name': relevant_labels['Doctor Name']['label'],
                 #    'clinic_name': relevant_labels['Clinic Name']['label'],
                 #    'body_part': relevant_labels['Body Part']['label'],
                 #    'modality': relevant_labels['Modality']['label']
-                   })
+                })
             haystack_docs.append(haystack_doc)
 
     return haystack_docs
-
 
 
 def text_split_preprocess(snapshot, tokenizer, max_seq_len=512, stride=10):
@@ -662,9 +660,9 @@ def cls_preprocess(snapshot, tokenizer, cls_type, max_seq_len=512, stride=10):
         # Find entities
 
         word_label = document.get(cls_type, None)['label']
-        if cls_type=='Modality':
+        if cls_type == 'Modality':
             number_label = modality_labels[word_label]
-        elif cls_type=='Body Part':
+        elif cls_type == 'Body Part':
             number_label = body_part_labels[word_label]
         else:
             raise Exception("cls_type must be 'MODALITY' or 'BODY_PART'")

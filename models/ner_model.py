@@ -1,12 +1,12 @@
-from models.training_model_api import TrainingModel
-from models.preprocessing import get_iob_entity_encoding, ner_preprocess, text_split_preprocess, df_to_dataloader, glob_to_snapshot
-from models.preprocessing import entity_labels
+from .training_model_api import TrainingModel
+from .preprocessing import get_iob_entity_encoding, ner_preprocess, text_split_preprocess, df_to_dataloader, glob_to_snapshot
+from .preprocessing import entity_labels
 from transformers import AutoTokenizer, BertForTokenClassification
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.model_selection import train_test_split
 from seqeval.metrics import classification_report
 import torch
-from models.utils import generate_default_parameters
+from .utils import generate_default_parameters
 
 class NerModel(TrainingModel):
     """
@@ -273,5 +273,5 @@ def test_model():
     print(model.train(train.reset_index(), test.reset_index()))
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     test_model()
