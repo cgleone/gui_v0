@@ -76,3 +76,21 @@ class QaModel(TrainingModel):
     def evaluate(self, test_data_snapshot):
         """Evaluate model performance on held-out test data and record test evaluation metrics"""
         pass
+
+    def predict(self, input_data):
+        """
+        Do inference predictions on list of input texts.
+
+        Parameters:
+        -----------
+        input_data: dict of str
+            Input texts and associated IDs as keys
+
+        Returns:
+        --------
+        results: dict of dict
+            Dictionary of result dictionaries for each input text associated with original IDs
+        """
+        self.update_inputs(input_data)
+        self.update_results()
+        return self.get_results()
