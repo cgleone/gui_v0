@@ -28,7 +28,6 @@ class QaModel(TrainingModel):
 
     def preprocess(self, data_snapshot, generate_labels=True):
         """Transform data snapshot into a SQUAD format JSON file
-        Returns 
 
         Parameters
         ----------
@@ -42,12 +41,11 @@ class QaModel(TrainingModel):
         List
             If generate_labels this is in SQuAD format, and if not, it is in the format of Haystack Document objects
         """
-        
         if generate_labels:
             output = qa_preprocess(data_snapshot, self.tokenizer, self.max_seq_len, self.json_save_path)
-        else: 
+        else:
             output = qa_preprocess_docs(data_snapshot, self.tokenizer, self.max_seq_len)
-    
+
         return output
 
     def train(self, dev_split):
@@ -59,7 +57,7 @@ class QaModel(TrainingModel):
         json_save_path : string path
             path to file containing SQuAD formatted training data
         dev_split : float between 0 and 1
-            percentage of SQuAD examples that get split off for evaluation 
+            percentage of SQuAD examples that get split off for evaluation
 
         Returns
         -------
@@ -69,8 +67,12 @@ class QaModel(TrainingModel):
         head_tail = os.path.split(self.json_save_path)
         data_dir = head_tail[0]
         train_filename = head_tail[1]
+<<<<<<< HEAD
         self.reader.train(data_dir=data_dir, train_filename=train_filename, use_gpu=True, n_epochs=self.epochs, max_seq_len=self.max_seq_len, dev_split=dev_split, learning_rate=self.learning_rate, batch_size=self.batch_size)
 
+=======
+        self.reader.train(data_dir=data_dir, train_filename=train_filename, use_gpu=True, n_epochs=self.n_epochs, max_seq_len=self.max_seq_len, dev_split=dev_split, learning_rate=self.learning_rate, batch_size=self.batch_size)
+>>>>>>> 4b75e63acdb08345cffaf003d4862fa5aec3f5ab
         return
 
     def _validate(self, val_dataloader, epoch):
@@ -78,5 +80,4 @@ class QaModel(TrainingModel):
 
     def evaluate(self, test_data_snapshot):
         """Evaluate model performance on held-out test data and record test evaluation metrics"""
-        
         pass
