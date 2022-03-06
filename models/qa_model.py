@@ -67,12 +67,7 @@ class QaModel(TrainingModel):
         head_tail = os.path.split(self.json_save_path)
         data_dir = head_tail[0]
         train_filename = head_tail[1]
-<<<<<<< HEAD
         self.reader.train(data_dir=data_dir, train_filename=train_filename, use_gpu=True, n_epochs=self.epochs, max_seq_len=self.max_seq_len, dev_split=dev_split, learning_rate=self.learning_rate, batch_size=self.batch_size)
-
-=======
-        self.reader.train(data_dir=data_dir, train_filename=train_filename, use_gpu=True, n_epochs=self.n_epochs, max_seq_len=self.max_seq_len, dev_split=dev_split, learning_rate=self.learning_rate, batch_size=self.batch_size)
->>>>>>> 4b75e63acdb08345cffaf003d4862fa5aec3f5ab
         return
 
     def _validate(self, val_dataloader, epoch):
