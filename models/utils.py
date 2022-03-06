@@ -1,3 +1,13 @@
+import io
+import time
+import boto3
+from smart_open import open
+import pickle
+
+import torch
+import pandas as pd
+
+
 def generate_default_parameters(
     max_seq_len=512,
     stride=10,
@@ -63,3 +73,134 @@ def generate_default_parameters(
             'padding': 'max_length'
         }
     return params
+
+
+def save_model_to_aws(model, val_data_id, s3_bucket='ty-capstone-test', s3_dir='model_training'):
+    """Saves model.nn weights and model.parameters to s3
+    Updates a model_list.csv file with the relevant info of the experiment so you can lookup the id later
+
+    Parameters
+    ----------
+    model : TrainingModel
+        Model to save
+    val_data_id : str or int
+        Identitifcation of data left out for validation
+    s3_bucket : str, optional
+        s3 bucket to save to, by default 'ty-capstone-test'
+    s3_dir : str, optional
+        directory (key) in the s3 bucket to save to, by default 'model_training'
+
+    Returns
+    -------
+    int
+        id of saved model
+    """
+    client = boto3.client('s3')
+
+    # Figure out naming of files
+    name = type(model).__name__
+    ts = time.strftime("%y-%m-%d %H:%M:%S")
+    # id is just the digits of the timestamp
+    id = ts.replace('-', '').replace(':', '').replace(' ', '')
+    model_fname = f"{name}_model_{id}.pt"
+    parameters_fname = f"{name}_parameters_{id}.pkl"
+
+    # Update the parameters to include location of saved model
+    params = model.get_parameters()
+    params['trained_model_url'] = f's3://{s3_bucket}/{s3_dir}/{model_fname}'
+
+    if name != "QaModel":
+        print(f'Saving model weights in {model_fname}')
+        # Save the nn weights directly
+        buffer = io.BytesIO()
+        torch.save(model.nn, buffer)
+        client.put_object(Bucket=s3_bucket, Key=f'{s3_dir}/{model_fname}', Body=buffer.getvalue())
+    else:
+        raise NotImplementedError("Cannnot save QA Model Weights")
+    # Save parameters
+    print(f'Saving model parameters in {parameters_fname}')
+    pickle_bytes = pickle.dumps(params)
+    client.put_object(Bucket=s3_bucket, Key=f'{s3_dir}/{parameters_fname}', Body=pickle_bytes)
+
+    # Add to relavent info to model_list.csv
+    info = {
+        'id': id,
+        'date_saved': ts,
+        'model_type': name,
+        'base_model_url': params['base_model_url'],
+        'val_data_id': val_data_id,
+        'max_seq_len': params['max_seq_len'],
+        'learning_rate': params['learning_rate'],
+        'parameters_file': f's3://{s3_bucket}/{s3_dir}/{parameters_fname}',
+        'model_file': f's3://{s3_bucket}/{s3_dir}/{model_fname}'
+    }
+    # Grab the model_list file from s3
+    key = f'{s3_dir}/model_list.csv'
+    read_file = client.get_object(Bucket=s3_bucket, Key=key)
+    df = pd.read_csv(read_file['Body'])
+    # Add new row and save
+    df = df.append(info, ignore_index=True)
+    csv_buffer = io.StringIO()
+    df.to_csv(csv_buffer, index=False)
+    client.put_object(Bucket=s3_bucket, Key=key, Body=csv_buffer.getvalue())
+    print(f'Successfully saved to AWS with ID: {id}')
+    return id
+
+
+def load_nn_from_aws(s3_url):
+    """Utility to load a nn weights from AWS s3
+
+    Parameters
+    ----------
+    s3_url : str
+        URL to weights, starting with s3://<bucket name>/path_to_weights
+
+    Returns
+    -------
+    torch.nn.Module
+        PyTorch neural network
+    """
+    client = boto3.client('s3')
+    with open(s3_url, 'rb', transport_params={'client': client}) as f:
+        nn = torch.load(f)
+    return nn
+
+
+def load_params_from_aws(s3_url):
+    """Utility to load model parameters from AWS s3
+
+    Parameters
+    ----------
+    s3_url : str
+        URL to weights, starting with s3://<bucket name>/path_to_parameters
+
+    Returns
+    -------
+    dict
+        Parameters dict
+    """
+    client = boto3.client('s3')
+    with open(s3_url, 'rb', transport_params={'client': client}) as f:
+        params = pickle.load(f)
+    return params
+
+
+def load_model_list_from_aws(s3_bucket='ty-capstone-test', s3_key='model_training/model_list.csv'):
+    """Utility to quickly load the model list into a dataframe
+
+    Parameters
+    ----------
+    s3_bucket : str, optional
+        by default 'ty-capstone-test'
+    s3_key : str, optional
+        by default 'model_training/model_list.csv'
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame of the model_list.csv file
+    """
+    client = boto3.client('s3')
+    read_file = client.get_object(Bucket=s3_bucket, Key=s3_key)
+    df = pd.read_csv(read_file['Body'])
+    return df
