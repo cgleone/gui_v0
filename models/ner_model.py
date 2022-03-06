@@ -1,10 +1,12 @@
 from .training_model_api import TrainingModel
-from .preprocessing import get_iob_entity_encoding, ner_preprocess, text_split_preprocess, df_to_dataloader
+from .preprocessing import get_iob_entity_encoding, ner_preprocess, text_split_preprocess, df_to_dataloader, glob_to_snapshot
 from .preprocessing import entity_labels
 from transformers import AutoTokenizer, BertForTokenClassification
 from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.model_selection import train_test_split
 from seqeval.metrics import classification_report
 import torch
+from .utils import generate_default_parameters, load_nn_from_aws
 
 class NerModel(TrainingModel):
     """
@@ -40,7 +42,11 @@ class NerModel(TrainingModel):
 
     def _init_nn(self):
         """Initialize the PyTorch BERT nn and put onto device"""
-        self.nn = BertForTokenClassification.from_pretrained(self.base_model_url, num_labels=self.num_labels)
+        if self.parameters.get('trained_model_url', None):
+            print('Loading nn from AWS (this could take a while)...')
+            self.nn = load_nn_from_aws(self.parameters['trained_model_url'])
+        else:
+            self.nn = BertForTokenClassification.from_pretrained(self.base_model_url, num_labels=self.num_labels)
         self.nn.to(self.device)
         return self.nn
 
@@ -82,12 +88,9 @@ class NerModel(TrainingModel):
         dict
             self.metrics dictionary
         """
-        # Transform dataframe into pytorch datasets for training and validation
-        tr_df = self.preprocess(training_data, generate_labels=True)
-        val_df = self.preprocess(validation_data, generate_labels=True)
         # Transform pytorch datasets into dataloaders
-        tr_dataloader = df_to_dataloader(tr_df, self.tokenizer, self.tokenizer_params, self.batch_size)
-        val_dataloader = df_to_dataloader(val_df, self.tokenizer, self.tokenizer_params, self.batch_size)
+        tr_dataloader = df_to_dataloader(training_data, self.tokenizer, self.tokenizer_params, self.batch_size)
+        val_dataloader = df_to_dataloader(validation_data, self.tokenizer, self.tokenizer_params, self.batch_size)
 
         for epoch in range(self.epochs):
             train_metrics = self._train(tr_dataloader, epoch)
@@ -262,3 +265,17 @@ class NerModel(TrainingModel):
         # Transform model outputs into tags for that text
         # Compute metric for that document in the snapshot
         pass
+
+
+def test_model():
+    model = NerModel()
+    model.set_parameters(generate_default_parameters())
+    snapshots = glob_to_snapshot("/Users/thomasfortin/Desktop/School/4A/BME 461/DataSynthesis/Synthesized_Data", extra_level=True)
+    data = model.preprocess(snapshots)
+    train = data.sample(frac=0.8)
+    test = data.drop(train.index)
+    print(model.train(train.reset_index(), test.reset_index()))
+
+
+if __name__ == "__main__":
+    test_model()

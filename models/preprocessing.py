@@ -11,6 +11,40 @@ import numpy as np
 from torch.utils.data import Dataset, DataLoader
 import torch
 
+HEAD = 0
+CHEST = 1
+SPINE = 2
+ABDOMEN = 3
+PELVIS = 4
+ABDOMEN_PELVIS = 5
+CHEST_ABDOMEN = 6
+CHEST_PELVIS = 7
+
+body_part_labels = {
+    "HEAD": HEAD,
+    "CHEST": CHEST,
+    "SPINE": SPINE,
+    "ABDOMEN": ABDOMEN,
+    "PELVIS": PELVIS,
+    "ABDOMEN PELVIS": ABDOMEN_PELVIS,
+    "CHEST ABDOMEN": CHEST_ABDOMEN,
+    "CHEST PELVIS": CHEST_PELVIS
+}
+
+CT = 0
+MRI = 1
+US = 2
+XRAY = 3
+IDK = 4
+
+modality_labels = {
+    "CT": CT,
+    "MRI": MRI,
+    "US": US,
+    "X-RAY": XRAY,
+    "IDK": IDK
+}
+
 
 class Document(UserDict):
     """Datastructure for holding text and label information
@@ -55,7 +89,7 @@ class Document(UserDict):
         """
         return {k: self.labels.get(k, {}) for k in self.LABELS_TO_CLASSIFY}
 
-def glob_to_snapshot(top_level_path):
+def glob_to_snapshot(top_level_path, extra_level=False):
     """Globs files in the top_level_path and reads into a data snapshot structure
     Will only keep files that have both a valid text and labels
     Example top_level_path: "/home/thomasfortin/data_v2"
@@ -72,7 +106,10 @@ def glob_to_snapshot(top_level_path):
     """
     # Texts
     prefix = top_level_path + "/Texts/"
-    files = glob.glob(prefix + "*/*.txt")
+    if extra_level:
+        files = glob.glob(prefix + "Mimic3/*/*.txt")
+    else:
+        files = glob.glob(prefix + "*/*.txt")
     texts = {}
     # Load texts as lines with '\n' between them
     for file in files:
@@ -87,7 +124,10 @@ def glob_to_snapshot(top_level_path):
 
     # Labels
     prefix = top_level_path + "/Labels/"
-    files = glob.glob(prefix + "*/*")
+    if extra_level:
+        files = glob.glob(prefix + "Mimic3/*/*")
+    else:
+        files = glob.glob(prefix + "*/*")
     labels = {}
     for file in files:
         # Labels
@@ -126,6 +166,8 @@ def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path):
     """
     Creates SQuAD formatted training data from a given snapshot. First it splits the documents by token lenghth,
     and then finds the true text in the contents of the reports and saves the SQuAD format QA pairs into a JSON file.
+
+    Returns: Data in SQuAD format (that was saved to the JSON file)
 
     Parameters
     ----------
@@ -216,6 +258,56 @@ def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path):
 
     with open(json_save_path, 'w') as f:
         json.dump(train_squad_data, f)
+
+    return train_squad_data
+
+def qa_preprocess_docs(snapshot, tokenizer, max_seq_len):
+    """
+    Creates haystack documents from a given snapshot. First it splits the documents by token length,
+    then it converts each to a haystack type doc,
+
+    Returns: Haystack Documents
+
+    Parameters
+    ----------
+    snapshot : dict of Documents
+        Data to be used
+    tokenizer: transformers.Tokenizer
+        Tokenizer associated with intended model
+    max_seq_len: int
+        Maximum token sequence length for transformers model
+
+
+    """
+    from haystack import Document
+    data = text_split_preprocess(snapshot, tokenizer, max_seq_len=max_seq_len)
+
+    data['id_search'] = data['id']
+
+    for index, row in data.iterrows():
+        searchId = row['id']
+        searchId = searchId[0:-2]
+        data['id_search'][index] = searchId
+
+    haystack_docs = []
+    for key, doc in snapshot.items():
+        relevant_labels = doc.get_labels_to_classify()
+
+        relevant_data = data.loc[data['id_search'] == key]
+
+        for idx, row in relevant_data.iterrows():
+            haystack_doc = Document(content = row['text'], 
+               meta = {
+                   'name': row['id']
+                #    'date_taken': relevant_labels['Date Taken']['label'],
+                #    'dr_name': relevant_labels['Doctor Name']['label'],
+                #    'clinic_name': relevant_labels['Clinic Name']['label'],
+                #    'body_part': relevant_labels['Body Part']['label'],
+                #    'modality': relevant_labels['Modality']['label']
+                })
+            haystack_docs.append(haystack_doc)
+
+    return haystack_docs
 
 
 def text_split_preprocess(snapshot, tokenizer, max_seq_len=512, stride=10):
@@ -516,9 +608,41 @@ def ner_preprocess(snapshot, tokenizer, entity_labels, max_seq_len=512, stride=1
     return training_data
 
 
-def cls_preprocess(snapshot, tokenizer, entity_labels, max_seq_len=512, stride=10):
+def cls_preprocess(snapshot, tokenizer, cls_type, max_seq_len=512, stride=10):
+    """Preprocessing transforms a snapshot datastructure with documents into a dataframe with ['text', 'label', 'id']
+    These dicts can be later transformed into a pandas dataframe with all the training data.
+
+    NER training labels are a vector of encoded labels corresponding to the IOB entity tagging scheme for that token.
+    This is accomplished by using regex to search for the positions in the text where the entity occurs.
+    The tokens within those position ranges are then assigned the appropriate encoding.
+    Preditions are only generated for the first token. Partial tokens from the WordPiece algorithm are not predicted on.
+    We split long texts into batches of tokens of max sequence length and use stride to prepend a number of tokens from
+    the preceding sequence. Note that there will not be the exact number stride of tokens prepended as this method tries
+    to ensure that we don't split on partial word pieces.
+
+    Parameters
+    ----------
+    snapshot : dict of Document
+        datastructure containing documents with texts and labels
+    tokenizer : transformers.Tokenizer
+        Tokenizer associated with intended model
+    entity_labels : dict
+        Mapping of label keys to entity names (e.g. {'Modality': 'MOD'})
+    max_seq_len : int
+        Maximum token sequence length for transformers model
+    stride : int
+        When splitting into phrases of max sequence length, how many tokens from previous sequence to prepend
+
+    Returns
+    -------
+    training_data : pd.DataFrame
+        DataFrame with columns ['text', 'label', 'id']
+    """
+    # Create entity encoding map from IOB labels to integers
     entity_encoding = get_iob_entity_encoding(entity_labels)
-    
+
+    # Iterate through snapshot and tag data
+    output = []
     for _id, document in snapshot.items():
         text = document.text
 
@@ -530,9 +654,59 @@ def cls_preprocess(snapshot, tokenizer, entity_labels, max_seq_len=512, stride=1
             truncation=True,
             max_length=None,
             return_overflowing_tokens=True)
-        
-        print(encoding)
-        break
+
+        # Find entities
+
+        word_label = document.get(cls_type, None)['label']
+        if cls_type == 'Modality':
+            number_label = modality_labels[word_label]
+        elif cls_type == 'Body Part':
+            number_label = body_part_labels[word_label]
+        else:
+            raise Exception("cls_type must be 'MODALITY' or 'BODY_PART'")
+
+        tokens = tokenizer.convert_ids_to_tokens(encoding['input_ids'][0])
+        offsets = encoding['offset_mapping'][0]
+
+        # Split text by max_seq_len
+        chunk_size = max_seq_len - 2  # For [CLS] and [SEP]
+
+        # First chunk
+        start = 1  # Because 0th token is [CLS]
+        end = min(start + chunk_size, len(tokens) - 1)
+        # Move end backwards to token that is not middle of word piece.
+        while tokens[end].startswith('##'):
+            end -= 1
+
+        temp = []
+        # Add chunks to temp
+        while end < len(tokens) - 1:
+            # Indices for sections of text
+            start_idx = offsets[start][0]
+            end_idx = offsets[end][0]
+            temp.append({'text': text[start_idx:end_idx], 'label': number_label})
+
+            # Move start to beginning of word piece
+            start = end - stride
+            while tokens[start].startswith('##'):
+                start -= 1
+            # Don't let end go to a bad index
+            end = min(end + chunk_size, len(tokens) - 1)
+            # Move end forward
+            while tokens[end].startswith('##') or (end - start > chunk_size):
+                end -= 1
+        # Last chunk
+        start_idx = offsets[start][0]
+        end_idx = offsets[-2][1]  # -1 token/offset is [SEP]
+        temp.append({'text': text[start_idx:end_idx], 'label': number_label})
+
+        # Add temp items to output, remake id to include enumeration of the chunk
+        for i, d in enumerate(temp):
+            d['id'] = _id + ':' + str(i)
+        output.extend(temp)
+
+    training_data = pd.DataFrame(output)
+    return training_data
 
 
 class TrainingDataset(Dataset):

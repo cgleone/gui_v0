@@ -25,9 +25,7 @@ class ClsModel(TrainingModel):
             parameters dictionary, model.__getattr__ will try to look here if the name doesn't exist in self.__dict__
         """
         super().set_parameters(parameters)
-        # Set number of labels
-        self.parameters['entity_encoding'] = get_iob_entity_encoding(entity_labels)
-        self.parameters['num_labels'] = len(self.entity_encoding) - 1  # Don't count the 'X' label
+        self.parameters['num_labels'] = 5
 
         # Check if we should use cuda
         if self.use_cuda and torch.cuda.is_available():
@@ -41,7 +39,7 @@ class ClsModel(TrainingModel):
 
     def _init_nn(self):
         """Initialize the PyTorch BERT nn and put onto device"""
-        self.nn = BertForTokenClassification.from_pretrained(self.base_model_url, num_labels=self.num_labels)
+        self.nn = BertForSequenceClassification.from_pretrained(self.base_model_url, num_labels=self.num_labels)
         self.nn.to(self.device)
         return self.nn
 
@@ -61,13 +59,13 @@ class ClsModel(TrainingModel):
         pd.DataFrame
             Data transformed into dataframe with keys for ['text', 'id'] and ['label'] if labels are generated
         """
-        # if generate_labels:
-        df = cls_preprocess(data_snapshot, self.tokenizer, self.entity_labels, self.max_seq_len, self.stride)
-        # else:
-        #     df = text_split_preprocess(data_snapshot, self.tokenizer, self.max_seq_len, self.stride)
+        if generate_labels:
+            df = cls_preprocess(data_snapshot, self.tokenizer, 'Modality')
+        else:
+            df = text_split_preprocess(data_snapshot, self.tokenizer, self.max_seq_len, self.stride)
         return df
 
-    def train(self, training_data, validation_data):
+    def train(self, tr_df, val_df):
         """Train the model based on the input parameters
         Trains self.nn for specified number of epochs, generates training and validation metrics
 
@@ -83,9 +81,6 @@ class ClsModel(TrainingModel):
         dict
             self.metrics dictionary
         """
-        # Transform dataframe into pytorch datasets for training and validation
-        tr_df = self.preprocess(training_data, generate_labels=True)
-        val_df = self.preprocess(validation_data, generate_labels=True)
         # Transform pytorch datasets into dataloaders
         tr_dataloader = df_to_dataloader(tr_df, self.tokenizer, self.tokenizer_params, self.batch_size)
         val_dataloader = df_to_dataloader(val_df, self.tokenizer, self.tokenizer_params, self.batch_size)
@@ -235,19 +230,11 @@ class ClsModel(TrainingModel):
         predictions = [id.item() for id in eval_preds]
 
         cm = confusion_matrix(labels, predictions)
-        # Get accuracy report of just tags
-        entity_encoding = self.entity_encoding
-        labels_to_tags = {v: k for k, v in entity_encoding.items()}
-        labels = [labels_to_tags[x] for x in labels]
-        predictions = [labels_to_tags[x] for x in predictions]
-        report = classification_report([labels], [predictions], digits=4)
-        # Total loss and accuracy
         eval_loss = eval_loss / nb_eval_steps
         eval_accuracy = eval_accuracy / nb_eval_steps
         metrics = {
             'epoch': epoch,
             'confusion_matrix': cm,
-            'iob_tag_report': report,
             'loss': eval_loss,
             'accuracy': eval_accuracy
         }
@@ -268,9 +255,16 @@ class ClsModel(TrainingModel):
 def test_model():
     model = ClsModel()
     model.set_parameters(generate_default_parameters())
+    data_snapshot = glob_to_snapshot("/Users/thomasfortin/Desktop/School/4A/BME 461/DataSynthesis/Synthesized_Data")
     df = model.preprocess(data_snapshot)
-    print(df)
+    df = df.sample(frac=.01)
+    training = df.sample(frac=.8)
+    test = df.drop(training.index)
+
+    result = model.train(training.reset_index(), test.reset_index())
+    return result, model
 
 
-if __name__=="__main__":
-    test_model
+if __name__ == "__main__":
+    result, model = test_model()
+    print(result)
