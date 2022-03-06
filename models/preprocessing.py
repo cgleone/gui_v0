@@ -305,10 +305,8 @@ def qa_preprocess_docs(snapshot, tokenizer, max_seq_len):
         relevant_data = data.loc[data['id_search'] == key]
 
         for idx, row in relevant_data.iterrows():
-            print(row)
-            haystack_doc = Document(
-                content=row['text'],
-                meta={
+            haystack_doc = Document(content = row['text'], 
+               meta = {
                    'name': row['id']
                 #    'date_taken': relevant_labels['Date Taken']['label'],
                 #    'dr_name': relevant_labels['Doctor Name']['label'],
