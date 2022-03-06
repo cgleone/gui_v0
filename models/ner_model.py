@@ -6,7 +6,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.model_selection import train_test_split
 from seqeval.metrics import classification_report
 import torch
-from .utils import generate_default_parameters
+from .utils import generate_default_parameters, load_nn_from_aws
 
 class NerModel(TrainingModel):
     """
@@ -42,7 +42,11 @@ class NerModel(TrainingModel):
 
     def _init_nn(self):
         """Initialize the PyTorch BERT nn and put onto device"""
-        self.nn = BertForTokenClassification.from_pretrained(self.base_model_url, num_labels=self.num_labels)
+        if self.parameters.get('trained_model_url', None):
+            print('Loading nn from AWS (this could take a while)...')
+            self.nn = load_nn_from_aws(self.parameters['trained_model_url'])
+        else:
+            self.nn = BertForTokenClassification.from_pretrained(self.base_model_url, num_labels=self.num_labels)
         self.nn.to(self.device)
         return self.nn
 
