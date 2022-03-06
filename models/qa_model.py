@@ -12,6 +12,7 @@ class QaModel(TrainingModel):
 
     def __init__(self):
         super().__init__()
+        
 
     def set_parameters(self, parameters):
         """Set parameters dictionary and setup model, tokenizer, and optimizer
@@ -23,6 +24,7 @@ class QaModel(TrainingModel):
         """
         super().set_parameters(parameters)
         self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_url)
+        self.reader = FARMReader(self.qaModel, use_gpu = True)
 
     def preprocess(self, data_snapshot, generate_labels=True):
         """Transform data snapshot into a SQUAD format JSON file
@@ -67,7 +69,7 @@ class QaModel(TrainingModel):
         head_tail = os.path.split(self.json_save_path)
         data_dir = head_tail[0]
         train_filename = head_tail[1]
-        self.reader.train(data_dir=data_dir, train_filename=train_filename, use_gpu=True, n_epochs=self.n_epochs, max_seq_len=self.max_seq_len, dev_split=dev_split, learning_rate=self.learning_rate, batch_size=self.batch_size)
+        self.reader.train(data_dir=data_dir, train_filename=train_filename, use_gpu=True, n_epochs=self.epochs, max_seq_len=self.max_seq_len, dev_split=dev_split, learning_rate=self.learning_rate, batch_size=self.batch_size)
 
         return
 

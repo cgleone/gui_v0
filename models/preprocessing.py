@@ -258,7 +258,6 @@ def qa_preprocess_docs(snapshot, tokenizer, max_seq_len):
         
 
         for idx, row in relevant_data.iterrows():
-            print(row)
             haystack_doc = Document(content = row['text'], 
                meta = {
                    'name': row['id']
