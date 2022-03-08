@@ -117,8 +117,12 @@ def save_model_to_aws(model, val_data_id, metrics=None, s3_bucket='ty-capstone-t
         buffer = io.BytesIO()
         torch.save(model.nn, buffer)
         client.put_object(Bucket=s3_bucket, Key=f'{s3_dir}/{model_fname}', Body=buffer.getvalue())
-    else:
-        raise NotImplementedError("Cannnot save QA Model Weights")
+    elif name == "QaModel":
+        model_fname = f"{name}_model_{id}.pkl"
+        print(f'Saving inferencer model weights in {model_fname}')
+        pickle_bytes = pickle.dumps(model.reader.inferencer.model)
+        client.put_object(Bucket=s3_bucket, Key=f'{s3_dir}/{model_fname}', Body=pickle_bytes)
+
     # Save parameters
     print(f'Saving model parameters in {parameters_fname}')
     pickle_bytes = pickle.dumps(params)
@@ -179,13 +183,13 @@ def load_nn_from_aws(s3_url):
     return nn
 
 
-def load_params_from_aws(s3_url):
-    """Utility to load model parameters from AWS s3
+def load_pickle_from_aws(s3_url):
+    """Utility to load pickle from AWS s3
 
     Parameters
     ----------
     s3_url : str
-        URL to weights, starting with s3://<bucket name>/path_to_parameters
+        URL to weights, starting with s3://<bucket name>/path_to_pickle
 
     Returns
     -------
