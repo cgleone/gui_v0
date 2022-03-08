@@ -29,7 +29,6 @@ class QaModel(TrainingModel):
         if self.parameters.get('trained_model_url', None):
             print('Loading nn from AWS (this could take a while)...')
             language_model = load_pickle_from_aws(self.parameters['training_model_url'])
-            language_model.to(self.reader.devices[0])
             self.reader.inferencer.model = language_model
 
     def preprocess(self, data_snapshot, generate_labels=True):
