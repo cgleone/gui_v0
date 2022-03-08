@@ -118,7 +118,9 @@ def save_model_to_aws(model, val_data_id, metrics=None, s3_bucket='ty-capstone-t
         torch.save(model.nn, buffer)
         client.put_object(Bucket=s3_bucket, Key=f'{s3_dir}/{model_fname}', Body=buffer.getvalue())
     elif name == "QaModel":
+        # Use .pkl extension since we're pickling this model
         model_fname = f"{name}_model_{id}.pkl"
+        params['trained_model_url'] = f's3://{s3_bucket}/{s3_dir}/{model_fname}'
         print(f'Saving inferencer model weights in {model_fname}')
         pickle_bytes = pickle.dumps(model.reader.inferencer.model)
         client.put_object(Bucket=s3_bucket, Key=f'{s3_dir}/{model_fname}', Body=pickle_bytes)

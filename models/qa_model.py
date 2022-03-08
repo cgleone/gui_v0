@@ -28,7 +28,7 @@ class QaModel(TrainingModel):
         # Load a pre-trained network saved on AWS
         if self.parameters.get('trained_model_url', None):
             print('Loading nn from AWS (this could take a while)...')
-            language_model = load_pickle_from_aws(self.parameters['training_model_url'])
+            language_model = load_pickle_from_aws(self.parameters['trained_model_url'])
             self.reader.inferencer.model = language_model
 
     def preprocess(self, data_snapshot, generate_labels=True):
