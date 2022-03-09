@@ -1,6 +1,6 @@
 from .training_model_api import TrainingModel
-from .preprocessing import get_iob_entity_encoding, qa_preprocess, qa_preprocess_docs
-from .preprocessing import entity_labels
+from .preprocessing import qa_preprocess, qa_preprocess_docs
+from .utils import load_pickle_from_aws
 from transformers import AutoTokenizer
 from haystack.nodes import FARMReader
 import os
@@ -24,7 +24,12 @@ class QaModel(TrainingModel):
         """
         super().set_parameters(parameters)
         self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_url)
-        self.reader = FARMReader(self.qaModel, use_gpu = True)
+        self.reader = FARMReader(self.qaModel, use_gpu=True)
+        # Load a pre-trained network saved on AWS
+        if self.parameters.get('trained_model_url', None):
+            print('Loading nn from AWS (this could take a while)...')
+            language_model = load_pickle_from_aws(self.parameters['trained_model_url'])
+            self.reader.inferencer.model = language_model
 
     def preprocess(self, data_snapshot, generate_labels=True):
         """Transform data snapshot into a SQUAD format JSON file
