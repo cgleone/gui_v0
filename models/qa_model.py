@@ -24,7 +24,8 @@ class QaModel(TrainingModel):
         """
         super().set_parameters(parameters)
         self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_url)
-        self.reader = FARMReader(self.qaModel, use_gpu=True)
+        self.reader = FARMReader(self.qaModel, use_gpu=True, num_processes=1)
+        self.reader.update_parameters(return_no_answer = True)
         # Load a pre-trained network saved on AWS
         if self.parameters.get('trained_model_url', None):
             print('Loading nn from AWS (this could take a while)...')
