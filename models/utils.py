@@ -128,7 +128,7 @@ def save_model_to_aws(model, val_data_id, metrics=None, s3_bucket='ty-capstone-t
         # Use .pkl extension since we're pickling this model
         model_fname = f"{name}_model_{id}.pkl"
         params['trained_model_url'] = f's3://{s3_bucket}/{s3_dir}/{model_fname}'
-        print(f'Saving inferencer model weights in {model_fname}')
+        print(f'Saving Naive Bayes model in {model_fname}')
         pickle_bytes = pickle.dumps(model.naive_bayes)
         client.put_object(Bucket=s3_bucket, Key=f'{s3_dir}/{model_fname}', Body=pickle_bytes)
 
