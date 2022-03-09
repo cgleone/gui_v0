@@ -81,21 +81,21 @@ class NbModel(TrainingModel):
         self.naive_bayes.fit(X_train_cv, y_train)
         predictions = self.naive_bayes.predict(X_test_cv)
         self.metrics = {
-            'accuracy': accuracy_score(y_test, predictions)
+            'accuracy': accuracy_score(y_test, predictions),
+            'precision': precision_score(y_test, predictions, average='weighted'),
+            'recall': recall_score(y_test, predictions, average='weighted')
         }
+
+        self._validate(X_test_cv, y_test )
     
         return self.metrics
 
-    def _validate(self, df):
-        X_train, X_test, y_train, y_test = train_test_split(df['text'], df['label'], random_state=1)
-        cv = CountVectorizer(strip_accents='ascii', token_pattern=u'(?ui)\\b\\w*[a-z]+\\w*\\b', lowercase=True, stop_words='english')
-        X_train_cv = cv.fit_transform(X_train)
-        X_test_cv = cv.transform(X_test)
+    def _validate(self, X_test_cv, y_test):
         
-        predictions = self.naive_bayes.predict(X_test_cv)
-        print('Accuracy score: ', accuracy_score(y_test, predictions))
-        print('Precision score: ', precision_score(y_test, predictions, average='weighted'))
-        print('Recall score: ', recall_score(y_test, predictions, average='weighted'))
+        # predictions = self.naive_bayes.predict(X_test_cv)
+        # print('Accuracy score: ', accuracy_score(y_test, predictions))
+        # print('Precision score: ', precision_score(y_test, predictions, average='weighted'))
+        # print('Recall score: ', recall_score(y_test, predictions, average='weighted'))
         
         return
 
