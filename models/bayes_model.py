@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score, precision_score, recall_score
+from .utils import load_pickle_from_aws
 import os
 
 class NbModel(TrainingModel):
@@ -29,6 +30,12 @@ class NbModel(TrainingModel):
         super().set_parameters(parameters)
 
         self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_url)
+
+         # Load a pre-trained network saved on AWS
+        if self.parameters.get('trained_model_url', None):
+            print('Loading model from AWS...')
+            language_model = load_pickle_from_aws(self.parameters['trained_model_url'])
+            self.naive_bayes = language_model
 
 
 
