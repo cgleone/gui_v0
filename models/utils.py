@@ -75,8 +75,8 @@ def generate_default_parameters(
     return params
 
 
-def save_model_to_aws(model, val_data_id, s3_bucket='ty-capstone-test', s3_dir='model_training'):
-    """Saves model.nn weights and model.parameters to s3
+def save_model_to_aws(model, val_data_id, metrics=None, s3_bucket='ty-capstone-test', s3_dir='model_training'):
+    """Saves model.nn weights and model.parameters to s3. If metrics are given, save those.
     Updates a model_list.csv file with the relevant info of the experiment so you can lookup the id later
 
     Parameters
@@ -85,6 +85,8 @@ def save_model_to_aws(model, val_data_id, s3_bucket='ty-capstone-test', s3_dir='
         Model to save
     val_data_id : str or int
         Identitifcation of data left out for validation
+    metrics : dict or None
+        Training metrics to save, by default None
     s3_bucket : str, optional
         s3 bucket to save to, by default 'ty-capstone-test'
     s3_dir : str, optional
@@ -122,6 +124,15 @@ def save_model_to_aws(model, val_data_id, s3_bucket='ty-capstone-test', s3_dir='
     pickle_bytes = pickle.dumps(params)
     client.put_object(Bucket=s3_bucket, Key=f'{s3_dir}/{parameters_fname}', Body=pickle_bytes)
 
+    # Save metrics
+    if metrics:
+        metrics_fname = f"{name}_metrics_{id}.pkl"
+        print(f'Saving model metrics in {metrics_fname}')
+        pickle_bytes = pickle.dumps(metrics)
+        client.put_object(Bucket=s3_bucket, Key=f'{s3_dir}/{metrics_fname}', Body=pickle_bytes)
+    else:
+        metrics_fname = ''
+
     # Add to relavent info to model_list.csv
     info = {
         'id': id,
@@ -131,8 +142,10 @@ def save_model_to_aws(model, val_data_id, s3_bucket='ty-capstone-test', s3_dir='
         'val_data_id': val_data_id,
         'max_seq_len': params['max_seq_len'],
         'learning_rate': params['learning_rate'],
-        'parameters_file': f's3://{s3_bucket}/{s3_dir}/{parameters_fname}',
-        'model_file': f's3://{s3_bucket}/{s3_dir}/{model_fname}'
+        'epochs': params['epochs'],
+        'parameters_url': f's3://{s3_bucket}/{s3_dir}/{parameters_fname}',
+        'model_url': f's3://{s3_bucket}/{s3_dir}/{model_fname}',
+        'metrics_url': f's3://{s3_bucket}/{s3_dir}/{metrics_fname}' if metrics else ''
     }
     # Grab the model_list file from s3
     key = f'{s3_dir}/model_list.csv'

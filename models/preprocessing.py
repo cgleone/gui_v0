@@ -46,6 +46,15 @@ modality_labels = {
 }
 
 
+template_ids = {
+    'data_v2_0.pkl': ('dr samson 3', 'National Diagnostic'),
+    'data_v2_1.pkl': ('dr samson 4', 'xray cathleen final'),
+    'data_v2_2.pkl': ('dr samson 1', 'NationalRad'),
+    'data_v2_3.pkl': ('mri cathle final', 'word_template'),
+    'data_v2_4.pkl': ('telerad', 'USA rad2')
+}
+
+
 class Document(UserDict):
     """Datastructure for holding text and label information
     Add convenince functions for getting labels we care about and looking up mostly in the labels dict
