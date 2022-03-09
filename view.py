@@ -58,9 +58,9 @@ class View(QMainWindow):
     def set_table_row_count(self, row_count, table):
         table.setRowCount(row_count)
 
-    def open_label_correction_dialog(self, filename, report_name, isPDF, report_labels):
+    def open_label_correction_dialog(self, filename, report_name, isPDF, report_labels, current_institutions):
         self.current_dialog.reset_dialog()
-        self.current_dialog.report_clicked(filename, report_name, isPDF, report_labels)
+        self.current_dialog.report_clicked(filename, report_name, isPDF, report_labels, current_institutions)
 
     def close_label_correction_dialog(self):
         self.current_dialog.close()

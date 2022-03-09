@@ -162,7 +162,7 @@ class Controller:
         if self.model.in_label_correction_mode:
             report_labels = self.model.get_current_report_labels(report_ID)
             self.model.store_table_row_and_fileID(row, report_ID)
-            self.view.open_label_correction_dialog(filename, name, isPDF, report_labels)
+            self.view.open_label_correction_dialog(filename, name, isPDF, report_labels, self.model.current_institutions)
         elif self.view.report_screen.in_select_mode:
             if self.view.report_screen.select_file_boxes[row].isChecked():
                 self.view.report_screen.select_file_boxes[row].setChecked(False)

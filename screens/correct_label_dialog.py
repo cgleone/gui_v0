@@ -11,7 +11,7 @@ from PyQt5.QtCore import Qt, QThread, QRect, pyqtSignal, QDateTime
 from PyQt5.QtWidgets import QGridLayout, QLabel, QToolBar, QStatusBar, QDialog, QTableWidgetItem, QHeaderView, \
     QLineEdit, QGridLayout, QTableWidget, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox, \
     QButtonGroup, QTreeWidget, QTreeWidgetItem, QAbstractItemView, QListWidget, QListWidgetItem, QTabWidget, QFrame, \
-    QComboBox, QDateEdit, QSpacerItem, QSizePolicy
+    QComboBox, QDateEdit, QSpacerItem, QSizePolicy, QCompleter
 
 
 class CorrectLabelDialog(QDialog):
@@ -69,10 +69,11 @@ class CorrectLabelDialog(QDialog):
         self.populate_label_corrections_layout()
 
 
-    def report_clicked(self, path, report, isPDF, report_labels):
+    def report_clicked(self, path, report, isPDF, report_labels, current_institutions):
         self.title_label = QLabel("Report: {}".format(report))
         self.title_label.setStyleSheet("font: bold 18px")
         self.set_initial_information(report_labels)
+        self.set_institution_completer(current_institutions)
 
         if isPDF:
             self.current_report = self.show_pdf(path)
@@ -159,6 +160,10 @@ class CorrectLabelDialog(QDialog):
         self.clinician_text.setText(report_labels[3])
         self.date_picker.setDateTime(datetime.strptime(report_labels[4], '%Y-%m-%d'))
 
+    def set_institution_completer(self, current_institutions):
+        self.completer = QCompleter(current_institutions)
+        self.completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.institution_text.setCompleter(self.completer)
 
 
     def create_dropdown(self, items):
