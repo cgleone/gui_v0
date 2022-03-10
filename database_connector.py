@@ -14,7 +14,7 @@ class DB_Connection:
         self.db = mysql.connect(
             host="localhost",
             user="root",
-            passwd="FYDP2022",
+            passwd="#Darren89candiesEW!",
             database="reportdata")
 
         self.cursor = self.db.cursor()
@@ -232,6 +232,10 @@ class DB_Connection:
         self.cursor.execute(query % report_id)
         self.db.commit()
 
+    def update_label_table(self, category, value, report_ID):
+        query = "UPDATE labels SET {} = \"{}\" WHERE report_ID = %s".format(category, value, report_ID)
+        self.cursor.execute(query % report_ID)
+        self.db.commit()
 
     def remove_things_that_dont_exist(self):
         self.cursor.execute("SELECT report_id FROM labels")

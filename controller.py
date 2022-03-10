@@ -127,7 +127,27 @@ class Controller:
 
     def done_label_correction_dialog(self):
         # save the new labels here!
+        self.model.determine_corrections(self.view.current_dialog.modality_dropdown,
+                                         self.view.current_dialog.bodypart_dropdown,
+                                         self.view.current_dialog.institution_text,
+                                         self.view.current_dialog.clinician_text,
+                                         self.view.current_dialog.date_picker)
+        self.search_again()
         self.view.close_label_correction_dialog()
+        if self.model.changes_applied:
+            self.view.report_screen.show_db_was_updated()
+
+    def search_again(self):
+        is_active_search = self.model.determine_if_searched(self.view.report_screen.filters_layout)
+        if is_active_search:
+            is_search_bar = self.model.determine_if_searchbar(self.view.report_screen.search_bar)
+            if is_search_bar:
+                self.begin_search()
+            else:
+                self.apply_filters()
+        else:
+            self.get_report_info_to_display(self.model.current_report_IDs)
+            self.display_report_info()
 
     def patient_select_screen(self):
         self.view.go_to_patient_select()
@@ -143,9 +163,11 @@ class Controller:
         self.view.go_to_report_screen()
 
     def report_clicked(self, row, col):
-        filename, isPDF, name = self.model.view_report(row, col)
+        filename, isPDF, name, report_ID = self.model.view_report(row, col)
         if self.model.in_label_correction_mode:
-            self.view.open_label_correction_dialog(filename, name, isPDF)
+            report_labels = self.model.get_current_report_labels(report_ID)
+            self.model.store_table_row_and_fileID(row, report_ID)
+            self.view.open_label_correction_dialog(filename, name, isPDF, report_labels, self.model.current_institutions)
         elif self.view.report_screen.in_select_mode:
             self.view.report_screen.update_row_colours()
             if self.view.report_screen.select_file_boxes[row].isChecked():
