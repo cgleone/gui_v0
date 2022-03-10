@@ -250,7 +250,8 @@ class ClsModel(TrainingModel):
         # Run inference for the entire text
         # Transform model outputs into tags for that text
         # Compute metric for that document in the snapshot
-        scores = []
+        predictions = []
+        true_values = []
         for k, v in test_data_snapshot.items():
             labels = v['labels']
             label = labels[type]['label']
@@ -264,8 +265,9 @@ class ClsModel(TrainingModel):
                 outputs = self.nn(input_ids=ids, attention_mask=mask, labels=labels)
                 results.append(torch.argmax(outputs).item())
 
-            scores.append(results[0]==label)
-        return sum(scores)/len(scores)
+            predictions.append(results[0])
+            true_values.append(label)
+        return confusion_matrix(predictions, true_values)
 
 
 def test_model():
