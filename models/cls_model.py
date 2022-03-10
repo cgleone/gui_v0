@@ -250,8 +250,7 @@ class ClsModel(TrainingModel):
         # Run inference for the entire text
         # Transform model outputs into tags for that text
         # Compute metric for that document in the snapshot
-
-        for k, v in test_data_snapshot:
+        for k, v in test_data_snapshot.items():
             labels = v['labels']
             label = labels[type]['label']
             df = cls_test_preprocess(v, self.tokenizer, type)
