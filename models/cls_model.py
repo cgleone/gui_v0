@@ -250,6 +250,7 @@ class ClsModel(TrainingModel):
         # Run inference for the entire text
         # Transform model outputs into tags for that text
         # Compute metric for that document in the snapshot
+        scores = []
         for k, v in test_data_snapshot.items():
             labels = v['labels']
             label = labels[type]['label']
@@ -260,10 +261,11 @@ class ClsModel(TrainingModel):
                 ids = batch['input_ids'].to(self.device, dtype=torch.long)
                 mask = batch['attention_mask'].to(self.device, dtype=torch.long)
                 labels = batch['label'].to(self.device, dtype=torch.long)
-
                 outputs = self.nn(input_ids=ids, attention_mask=mask, labels=labels)
-                results.append(outputs)
-            return results, modality_labels[label]
+                results.append(torch.argmax(outputs).item())
+
+            scores.append(results[0]==label)
+        return sum(scores)/len(scores)
 
 
 def test_model():
