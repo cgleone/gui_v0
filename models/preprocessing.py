@@ -672,7 +672,7 @@ def cls_preprocess(snapshot, tokenizer, cls_type, max_seq_len=512, stride=10):
         elif cls_type == 'Body Part':
             number_label = body_part_labels[word_label]
         else:
-            raise Exception("cls_type must be 'MODALITY' or 'BODY_PART'")
+            raise Exception("cls_type must be 'Modality' or 'Body Part'")
 
         tokens = tokenizer.convert_ids_to_tokens(encoding['input_ids'][0])
         offsets = encoding['offset_mapping'][0]
@@ -721,7 +721,6 @@ def cls_preprocess(snapshot, tokenizer, cls_type, max_seq_len=512, stride=10):
 class TrainingDataset(Dataset):
     def __init__(self, df, tokenizer, tokenization_params):
         """Setup parameters for the dataset
-
         Parameters
         ----------
         df : pd.DataFrame
@@ -746,13 +745,50 @@ class TrainingDataset(Dataset):
     def __getitem__(self, index):
         """Processing when returning an item from the Dataset. Converts text into encoding using tokenizer.
         Converts items from encoding to PyTorch tensors
-
         Parameters
         ----------
         index : int
             index of item to access
-
         Returns
         -------
         dict
-            Output encoding from the tokenize
+            Output encoding from the tokenizer on the text.
+            Relevant keys are ['input_ids', 'attention_mask', 'token_type_ids', 'label']
+            What keys are present may depend on tokenizer parameters
+        """
+        text = self.df.loc[index, 'text']
+        label = self.df.loc[index, 'label']
+        # Encode the text
+        encoding = self.tokenizer(text, **self.params)
+        encoding['label'] = label
+        encoding = {key: torch.as_tensor(val) for key, val in encoding.items()}
+        return encoding
+
+
+def df_to_dataloader(df, tokenizer, tokenization_params, batch_size=4, shuffle=True, num_workers=0):
+    """Transform a dataframe with training data into a PyTorch dataloader for training
+    Parameters
+    ----------
+    df : pd.DataFrame
+        training or validation data
+    tokenizer : huggingface tokenizer
+        Tokenizer to do encoding
+    tokenization_params : dict
+        Parameters for tokenization passed to tokenizer. Note, do not set {'return_tensors': 'pt'} because this adds an
+        extra dimension. Keep 'return_tensors' to default as this function does the torch tensor conversion when it
+        returns the item
+    batch_size : int, optional
+        batch size, by default 4
+        For sequence length of 512, batch size of 4 is largest. With smaller sequence lengths, use larger batch sizes
+    shuffle : bool, optional
+        Whether to shuffle the data, by default True
+    num_workers : int, optional
+        Number of CPU cores to use for paralleization, by default 0
+    Returns
+    -------
+    torch.utils.data.Dataloader
+        PyTorch dataloader for the training data
+    """
+    dataset = TrainingDataset(df, tokenizer, tokenization_params)
+    dataloader = DataLoader(dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers)
+    return dataloader

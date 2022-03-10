@@ -1,11 +1,12 @@
 from .training_model_api import TrainingModel
 from .preprocessing import get_iob_entity_encoding, cls_preprocess, text_split_preprocess, df_to_dataloader
 from .preprocessing import entity_labels
-from transformers import AutoTokenizer, BertForTokenClassification
+from transformers import AutoTokenizer, BertForSequenceClassification
 from sklearn.metrics import accuracy_score, confusion_matrix
 from seqeval.metrics import classification_report
 import torch
-from .utils import generate_default_parameters
+from .utils import generate_default_parameters, save_model_to_aws, load_training_and_val_data
+import pandas as pd
 
 class ClsModel(TrainingModel):
     """
@@ -43,7 +44,7 @@ class ClsModel(TrainingModel):
         self.nn.to(self.device)
         return self.nn
 
-    def preprocess(self, data_snapshot, generate_labels=True):
+    def preprocess(self, data_snapshot, generate_labels=True, type='Modality'):
         """Transform data snapshot into a dataframe
         Returns a dataframe of the text without labels in the case of inference when generate_labels is set to False
 
@@ -60,7 +61,7 @@ class ClsModel(TrainingModel):
             Data transformed into dataframe with keys for ['text', 'id'] and ['label'] if labels are generated
         """
         if generate_labels:
-            df = cls_preprocess(data_snapshot, self.tokenizer, 'Modality')
+            df = cls_preprocess(data_snapshot, self.tokenizer, type)
         else:
             df = text_split_preprocess(data_snapshot, self.tokenizer, self.max_seq_len, self.stride)
         return df
@@ -265,6 +266,20 @@ def test_model():
     return result, model
 
 
+def train_model(val_num, type, base_model):
+    model = ClsModel()
+    params = generate_default_parameters()
+    params['batch_size']=8
+    params['base_model_url']=base_model
+    model.set_parameters(params)
+    training_snapshots, testing_snapshots = load_training_and_val_data(val_num)
+    val_df = model.preprocess(testing_snapshots, type).reset_index()
+    train_df = pd.concat(list(map(model.preprocess, training_snapshots))).reset_index()
+    model.train(train_df, val_df)
+    return model
+
+
 if __name__ == "__main__":
-    result, model = test_model()
-    print(result)
+    # do whatever you want
+    x = 1
+

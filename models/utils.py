@@ -217,3 +217,18 @@ def load_model_list_from_aws(s3_bucket='ty-capstone-test', s3_key='model_trainin
     read_file = client.get_object(Bucket=s3_bucket, Key=s3_key)
     df = pd.read_csv(read_file['Body'])
     return df
+
+
+def load_training_and_val_data(val_num):
+    numbers = range(5)
+    training = []
+    val = None
+    for i in numbers:
+        with open('/home/trevoryu/capstone/data/data_v2_{}.pkl'.format(i), 'rb') as f:
+            if i==val_num:
+                val = pickle.load(f)
+            else:
+                training.append(pickle.load(f))
+
+    return training, val
+
