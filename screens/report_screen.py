@@ -37,6 +37,7 @@ class ReportScreen(QWidget):
         self.thread_is_running = False
         self.in_select_mode = False
         self.dont_ask_again = False
+        self.current_selected_rows = []
         self.warning_dialog = helpers.WarningDialog()
         self.select_file_boxes = []
 
@@ -92,7 +93,12 @@ class ReportScreen(QWidget):
         self.current_hover = [0]
         self.report_table.cellEntered.connect(self.cell_hover)
 
+    def clear_cell_widget_column(self):
+        for i in range(self.report_table.rowCount()):
+            self.report_table.removeCellWidget(i, self.column_count - 1)
+
     def create_table_columns(self, current_categories):
+        self.clear_cell_widget_column()
         self.column_count = len(current_categories) + 1 # add one for the garbage cans
         self.report_table.setColumnCount(self.column_count)
         self.report_table.setHorizontalHeaderLabels(current_categories + [''])
@@ -116,7 +122,6 @@ class ReportScreen(QWidget):
 
 
     def cell_hover(self, row):
-
         underlined = QFont()
         underlined.setUnderline(True)
         normal = QFont()
@@ -134,13 +139,16 @@ class ReportScreen(QWidget):
             old_item = self.report_table.item(self.current_hover[0], col)
             if self.current_hover != [row]:
                 try:
-                    old_item.setBackground(QBrush(QColor('white')))
-                    old_item.setFont(normal)
-                    item.setBackground(QBrush(QColor(self.cell_hover_colour)))
+                    if old_item.row() not in self.current_selected_rows:
+                        old_item.setBackground(QBrush(QColor('white')))
+                        old_item.setFont(normal)
+                    if item.row() not in self.current_selected_rows:
+                        item.setBackground(QBrush(QColor(self.cell_hover_colour)))
                     if not self.in_select_mode:
                         item.setFont(underlined)
                 except:
-                    item.setBackground(QBrush(QColor(self.cell_hover_colour)))
+                    if item.row() not in self.current_selected_rows:
+                        item.setBackground(QBrush(QColor(self.cell_hover_colour)))
                     if not self.in_select_mode:
                         item.setFont(underlined)
                     print("problem caught")
@@ -151,6 +159,8 @@ class ReportScreen(QWidget):
         self.select_file_boxes.clear()
         for button in self.garbage_can_buttons.buttons():
             self.garbage_can_buttons.removeButton(button)
+            button.hide()
+            del button
 
     def populate_report_table(self, report_data):
         self.clear_garbage_and_checks()
@@ -158,7 +168,7 @@ class ReportScreen(QWidget):
             return
         for i in range(len(report_data)):
             row_data = report_data[i]
-            for j in range(len(row_data)):
+            for j in range(self.column_count-1):
                 cell_data = row_data[j][0][0]
                 self.report_table.setItem(i, j, QTableWidgetItem(cell_data))
 
@@ -176,7 +186,7 @@ class ReportScreen(QWidget):
                 del_button = QPushButton()
                 del_button.setIcon(garbage_can)
                 del_button.setStyleSheet("background-color: #bfbfbf; border-color: white; padding: 1px")
-                self.report_table.setCellWidget(i, len(row_data), del_button)
+                self.report_table.setCellWidget(i, self.column_count-1, del_button)
                 self.garbage_can_buttons.addButton(del_button, i)
 
     def populate_last_column(self):
@@ -299,6 +309,8 @@ class ReportScreen(QWidget):
         for garbage_can in self.garbage_can_buttons.buttons():
             garbage_can.setEnabled(True)
         self.in_select_mode = False
+        self.current_selected_rows.clear()
+        self.update_row_colours()
         self.populate_last_column()
         self.enable_actions(True)
 
@@ -309,6 +321,30 @@ class ReportScreen(QWidget):
                 indices.append(i)
         return indices
 
+    def update_row_colours(self):
+        if not self.in_select_mode:
+            for row in range(self.report_table.rowCount()):
+                for col in range(0, self.column_count):
+                    item = self.report_table.item(row, col)
+                    item.setBackground(QBrush(QColor('white')))
+            return
+
+        for row in range(len(self.select_file_boxes)):
+            if self.select_file_boxes[row].isChecked():
+                if row not in self.current_selected_rows:
+                    self.current_selected_rows.append(row)
+                for col in range(0, self.column_count):
+                    item = self.report_table.item(row, col)
+                    item.setBackground(QBrush(QColor('#787878')))
+
+            else:
+                if row in self.current_selected_rows:
+                    self.current_selected_rows.remove(row)
+                for col in range(0, self.column_count):
+                    item = self.report_table.item(row, col)
+                    item.setBackground(QBrush(QColor('white')))
+
+        print(self.current_selected_rows)
 
     def exit_label_correction_mode(self):
         self.label_correction_layout.removeWidget(self.correction_instructions)

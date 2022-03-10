@@ -70,6 +70,7 @@ class Controller:
 
     def multi_file_deletion(self):
         self.model.files_selected_for_deletion.clear()
+        self.view.report_screen.current_selected_rows.clear()
         indices = self.view.report_screen.get_selected_file_indices()
         self.model.prep_for_deletion(indices)
         if self.view.report_screen.dont_ask_again:
@@ -99,7 +100,11 @@ class Controller:
         self.model.files_selected_for_deletion.clear()
         self.view.report_screen.enter_file_deletion_mode()
         for checkbox in self.view.report_screen.select_file_boxes:
-            checkbox.stateChanged.connect(self.view.report_screen.update_delete_enabled_status)
+            checkbox.stateChanged.connect(self.check_mark_clicked)
+
+    def check_mark_clicked(self):
+        self.view.report_screen.update_delete_enabled_status()
+        self.view.report_screen.update_row_colours()
 
     def exit_delete_mode(self):
         self.model.files_selected_for_deletion.clear()
@@ -142,6 +147,7 @@ class Controller:
         if self.model.in_label_correction_mode:
             self.view.open_label_correction_dialog(filename, name, isPDF)
         elif self.view.report_screen.in_select_mode:
+            self.view.report_screen.update_row_colours()
             if self.view.report_screen.select_file_boxes[row].isChecked():
                 self.view.report_screen.select_file_boxes[row].setChecked(False)
             else:

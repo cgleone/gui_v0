@@ -233,10 +233,20 @@ class DB_Connection:
         self.db.commit()
 
 
+    def remove_things_that_dont_exist(self):
+        self.cursor.execute("SELECT report_id FROM labels")
+        ids = self.cursor.fetchall()
+        for id in ids:
+            query = "SELECT 1 FROM reports WHERE report_id=%s"
+            self.cursor.execute(query % id)
+            result = self.cursor.fetchall()
+            if not result:
+                query = "DELETE FROM labels WHERE report_id=%s"
+                self.cursor.execute(query % id)
+                self.db.commit()
 
-
-
-test_db = DB_Connection()
+# test_db = DB_Connection()
+# test_db.remove_things_that_dont_exist()
 # test_db.get_report_IDs(4)
 # test_db.get_report_date(4)
 # print(test_db.get_patient_info())

@@ -159,8 +159,8 @@ class Model():
         shutil.copy(path, 'OCR/reports_temp/'+filename)
         ocr_ran_successfully = self.call_ocr(filename, id)
         if ocr_ran_successfully:
-            label_args = self.call_fake_nlp(id)
-            # label_args = self.call_nlp(id)
+            #label_args = self.call_fake_nlp(id)
+            label_args = self.call_nlp(id)
         else:
             label_args = [self.current_patient_ID, id] + [None]*5
         self.db_connection.add_labels(label_args)
