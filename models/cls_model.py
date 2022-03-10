@@ -266,7 +266,7 @@ class ClsModel(TrainingModel):
                 results.append(torch.argmax(outputs.logits).item())
 
             predictions.append(results[0])
-            true_values.append(label)
+            true_values.append(modality_labels[label])
         return confusion_matrix(predictions, true_values)
 
 
