@@ -1,5 +1,5 @@
 from .training_model_api import TrainingModel
-from .preprocessing import get_iob_entity_encoding, cls_preprocess, text_split_preprocess, df_to_dataloader
+from .preprocessing import get_iob_entity_encoding, cls_preprocess, cls_test_preprocess, text_split_preprocess, df_to_dataloader
 from .preprocessing import entity_labels
 from transformers import AutoTokenizer, BertForSequenceClassification
 from sklearn.metrics import accuracy_score, confusion_matrix
@@ -241,7 +241,7 @@ class ClsModel(TrainingModel):
         }
         return metrics
 
-    def evaluate(self, test_data_snapshot):
+    def evaluate(self, test_data_snapshot, type='Modality'):
         """Evaluate model performance on held-out test data and record test evaluation metrics"""
         # Transform data snapshot into training data
         # For each document in the snapshot
@@ -250,7 +250,21 @@ class ClsModel(TrainingModel):
         # Run inference for the entire text
         # Transform model outputs into tags for that text
         # Compute metric for that document in the snapshot
-        pass
+
+        for k, v in test_data_snapshot:
+            labels = v['labels']
+            label = labels[type]['label']
+            df = cls_test_preprocess(v, self.tokenizer, type)
+            test_dataloader = df_to_dataloader(df, self.tokenizer, self.tokenizer_params, 1)
+            results = []
+            for idx, batch in enumerate(test_dataloader):
+                ids = batch['input_ids'].to(self.device, dtype=torch.long)
+                mask = batch['attention_mask'].to(self.device, dtype=torch.long)
+                labels = batch['label'].to(self.device, dtype=torch.long)
+
+                outputs = self.nn(input_ids=ids, attention_mask=mask, labels=labels)
+                results.append(outputs)
+            return results, label
 
 
 def test_model():

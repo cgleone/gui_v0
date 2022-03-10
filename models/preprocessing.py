@@ -717,6 +717,66 @@ def cls_preprocess(snapshot, tokenizer, cls_type, max_seq_len=512, stride=10):
     training_data = pd.DataFrame(output)
     return training_data
 
+def cls_test_preprocess(document, tokenizer, cls_type, max_seq_len=512, stride=10):
+    text = document.text
+
+    # Make labels on un-split text with max_length=None
+    encoding = tokenizer(
+        text,
+        return_offsets_mapping=True,
+        padding='max_length',
+        truncation=True,
+        max_length=None,
+        return_overflowing_tokens=True)
+
+    # Find entities
+
+    word_label = document.get(cls_type, None)['label']
+    if cls_type == 'Modality':
+        number_label = modality_labels[word_label]
+    elif cls_type == 'Body Part':
+        number_label = body_part_labels[word_label]
+    else:
+        raise Exception("cls_type must be 'Modality' or 'Body Part'")
+
+    tokens = tokenizer.convert_ids_to_tokens(encoding['input_ids'][0])
+    offsets = encoding['offset_mapping'][0]
+
+    # Split text by max_seq_len
+    chunk_size = max_seq_len - 2  # For [CLS] and [SEP]
+
+    # First chunk
+    start = 1  # Because 0th token is [CLS]
+    end = min(start + chunk_size, len(tokens) - 1)
+    # Move end backwards to token that is not middle of word piece.
+    while tokens[end].startswith('##'):
+        end -= 1
+
+    temp = []
+    # Add chunks to temp
+    while end < len(tokens) - 1:
+        # Indices for sections of text
+        start_idx = offsets[start][0]
+        end_idx = offsets[end][0]
+        temp.append({'text': text[start_idx:end_idx], 'label': number_label})
+
+        # Move start to beginning of word piece
+        start = end - stride
+        while tokens[start].startswith('##'):
+            start -= 1
+        # Don't let end go to a bad index
+        end = min(end + chunk_size, len(tokens) - 1)
+        # Move end forward
+        while tokens[end].startswith('##') or (end - start > chunk_size):
+            end -= 1
+    # Last chunk
+    start_idx = offsets[start][0]
+    end_idx = offsets[-2][1]  # -1 token/offset is [SEP]
+    temp.append({'text': text[start_idx:end_idx], 'label': number_label})
+
+    training_data = pd.DataFrame(temp)
+    return training_data
+
 
 class TrainingDataset(Dataset):
     def __init__(self, df, tokenizer, tokenization_params):
