@@ -1,6 +1,6 @@
 from .training_model_api import TrainingModel
 from .preprocessing import get_iob_entity_encoding, cls_preprocess, cls_test_preprocess, text_split_preprocess, df_to_dataloader
-from .preprocessing import entity_labels
+from .preprocessing import entity_labels, modality_labels
 from transformers import AutoTokenizer, BertForSequenceClassification
 from sklearn.metrics import accuracy_score, confusion_matrix
 from seqeval.metrics import classification_report
@@ -264,7 +264,7 @@ class ClsModel(TrainingModel):
 
                 outputs = self.nn(input_ids=ids, attention_mask=mask, labels=labels)
                 results.append(outputs)
-            return results, label
+            return results, modality_labels[label]
 
 
 def test_model():
