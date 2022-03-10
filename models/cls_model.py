@@ -263,7 +263,7 @@ class ClsModel(TrainingModel):
                 mask = batch['attention_mask'].to(self.device, dtype=torch.long)
                 labels = batch['label'].to(self.device, dtype=torch.long)
                 outputs = self.nn(input_ids=ids, attention_mask=mask, labels=labels)
-                results.append(torch.argmax(outputs).item())
+                results.append(torch.argmax(outputs.logits).item())
 
             predictions.append(results[0])
             true_values.append(label)
