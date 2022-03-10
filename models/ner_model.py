@@ -5,6 +5,7 @@ from transformers import AutoTokenizer, BertForTokenClassification
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.model_selection import train_test_split
 from seqeval.metrics import classification_report
+from scipy.stats.mstats import gmean
 import torch
 from .utils import generate_default_parameters, load_nn_from_aws
 
@@ -254,6 +255,91 @@ class NerModel(TrainingModel):
             'accuracy': eval_accuracy
         }
         return metrics
+
+    def _extract_entities(self, text):
+        """
+        Extract entities from a single piece of text
+        From logits of forward pass, softmax to comptute label probabilities, use the argmax to get the predicted label
+        for that token Loop through the tokens and construct the entity from consecutively labelled tokens. Because we
+        only predict on the first wordpiece, we add partial wordpieces to the entity.
+        The probabilities for the entity are computed by the geometric mean of the softmax probabilities for each token
+        in that entity (exluding partial wordpiece tokens).
+
+        Parameters
+        ----------
+        text : str
+            Text to extract entities from
+
+        Returns
+        -------
+        dict
+            entities, each with keys for the entity type and values as lists tuples (entity, probability)
+        """
+        ids_to_labels = {v: k for k, v in self.entity_encoding.items()}
+
+        inputs = self.tokenizer(
+            text,
+            padding='max_length',
+            truncation=True,
+            max_length=self.max_seq_len,
+            return_tensors="pt")
+
+        # Forward pass
+        self.nn.eval()
+        with torch.no_grad():
+            ids = inputs["input_ids"].to(self.device)
+            mask = inputs["attention_mask"].to(self.device)
+            outputs = self.nn(ids, attention_mask=mask)
+            logits = outputs[0]
+
+            # Compute labels and probs
+            active_logits = logits.view(-1, self.num_labels)  # shape (batch_size * seq_len, num_labels)
+            probs = torch.softmax(active_logits, axis=1)
+            pred_probs, pred_inds = torch.max(probs, axis=1)
+            pred_probs = pred_probs.cpu().numpy()
+            pred_inds = pred_inds.cpu().numpy()
+
+            pred_labels = [ids_to_labels[i] for i in pred_inds]
+            tokens = self.tokenizer.convert_ids_to_tokens(ids.flatten().tolist())
+
+        # Extract entities from indices
+        entities = {}
+        entity = ''
+        ent_type = 'O'
+        temp_probs = []
+
+        for token, pred, prob in zip(tokens, pred_labels, pred_probs):
+            if token in ['[CLS]', '[SEP]', '[PAD]']:
+                continue
+            # Add partial word pieces
+            if entity and token.startswith('##'):
+                entity += token.lstrip('##')
+            elif pred.startswith('B-') or pred.startswith('I-'):
+                # Start an entity
+                if ent_type != pred[2:]:
+                    if entity:
+                        entities.setdefault(ent_type, []).append((entity, gmean(temp_probs)))
+                        entity = ''
+                        temp_probs = []
+                    entity = token
+                    ent_type = pred[2:]
+                    temp_probs.append(prob)
+                # Continue entity
+                else:
+                    entity = ' '.join([entity, token])
+                    temp_probs.append(prob)
+            else:
+                if entity:
+                    entities.setdefault(ent_type, []).append((entity, gmean(temp_probs)))
+                    entity = ''
+                    ent_type = 'O'
+                    temp_probs = []
+                if pred == 'O':
+                    continue
+        if entity:
+            entities.setdefault(ent_type, []).append((entity, gmean(temp_probs)))
+
+        return entities
 
     def evaluate(self, test_data_snapshot):
         """Evaluate model performance on held-out test data and record test evaluation metrics"""
