@@ -24,15 +24,14 @@ class QaModel(TrainingModel):
         """
         super().set_parameters(parameters)
         self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_url)
-        self.reader = FARMReader(self.qaModel, use_gpu=True, num_processes=1)
-        self.reader.update_parameters(return_no_answer = True)
+        self.reader = FARMReader(self.qaModel, use_gpu=True, num_processes=1, return_no_answer=True, top_k=1)
         # Load a pre-trained network saved on AWS
         if self.parameters.get('trained_model_url', None):
             print('Loading nn from AWS (this could take a while)...')
             language_model = load_pickle_from_aws(self.parameters['trained_model_url'])
             self.reader.inferencer.model = language_model
 
-    def preprocess(self, data_snapshot, generate_labels=True):
+    def preprocess(self, data_snapshot, generate_labels=True, label_type='all'):
         """Transform data snapshot into a SQUAD format JSON file
 
         Parameters
@@ -48,7 +47,10 @@ class QaModel(TrainingModel):
             If generate_labels this is in SQuAD format, and if not, it is in the format of Haystack Document objects
         """
         if generate_labels:
-            output = qa_preprocess(data_snapshot, self.tokenizer, self.max_seq_len, self.json_save_path)
+            if label_type != 'all':
+                output = qa_preprocess(data_snapshot, self.tokenizer, self.max_seq_len, self.json_save_path_eval, label_type)
+            else:
+                output = qa_preprocess(data_snapshot, self.tokenizer, self.max_seq_len, self.json_save_path)
         else:
             output = qa_preprocess_docs(data_snapshot, self.tokenizer, self.max_seq_len)
 
@@ -73,7 +75,9 @@ class QaModel(TrainingModel):
         head_tail = os.path.split(self.json_save_path)
         data_dir = head_tail[0]
         train_filename = head_tail[1]
-        self.reader.train(data_dir=data_dir, train_filename=train_filename, use_gpu=True, n_epochs=self.epochs, max_seq_len=self.max_seq_len, dev_split=dev_split, learning_rate=self.learning_rate, batch_size=self.batch_size)
+        self.reader.train(data_dir=data_dir, train_filename=train_filename, use_gpu=True, 
+                n_epochs=self.epochs, max_seq_len=self.max_seq_len, dev_split=dev_split, learning_rate=self.learning_rate, 
+                batch_size=self.batch_size, evaluate_every=100)
         return
 
     def _validate(self, val_dataloader, epoch):
