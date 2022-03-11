@@ -1,5 +1,5 @@
 from .training_model_api import TrainingModel
-from .preprocessing import get_iob_entity_encoding, ner_preprocess, text_split_preprocess, df_to_dataloader, glob_to_snapshot
+from .preprocessing import get_iob_entity_encoding, ner_preprocess, text_split_preprocess, df_to_dataloader, Document
 from .preprocessing import entity_labels
 from transformers import AutoTokenizer, AutoModelForTokenClassification
 from sklearn.metrics import accuracy_score, confusion_matrix
@@ -17,6 +17,13 @@ class NerModel(TrainingModel):
     def __init__(self):
         super().__init__()
         self.entity_labels = entity_labels
+        self.entities_to_results = {
+            'BOP': 'body_part',
+            'DOP': 'date_of_procedure',
+            'DRN': 'dr_name',
+            'IMC': 'clinic_name',
+            'MOD': 'modality'
+        }
 
     def set_parameters(self, parameters):
         """Set parameters dictionary and setup model, tokenizer, and optimizer
@@ -282,6 +289,7 @@ class NerModel(TrainingModel):
             padding='max_length',
             truncation=True,
             max_length=self.max_seq_len,
+            return_offset_mapping=True,
             return_tensors="pt")
 
         # Forward pass
@@ -301,45 +309,105 @@ class NerModel(TrainingModel):
 
             pred_labels = [ids_to_labels[i] for i in pred_inds]
             tokens = self.tokenizer.convert_ids_to_tokens(ids.flatten().tolist())
+            offsets = inputs['offset_mapping'].flatten().tolist()
 
         # Extract entities from indices
         entities = {}
-        entity = ''
         ent_type = 'O'
         temp_probs = []
+        start = None
 
-        for token, pred, prob in zip(tokens, pred_labels, pred_probs):
+        for token, pred, prob, offset in zip(tokens, pred_labels, pred_probs, offsets):
             if token in ['[CLS]', '[SEP]', '[PAD]']:
                 continue
             # Add partial word pieces
-            if entity and token.startswith('##'):
-                entity += token.lstrip('##')
+            if start is not None and token.startswith('##'):
+                end = offset[1]
             elif pred.startswith('B-') or pred.startswith('I-'):
-                # Start an entity
+                # Start a new entity
                 if ent_type != pred[2:]:
-                    if entity:
-                        entities.setdefault(ent_type, []).append((entity, gmean(temp_probs)))
-                        entity = ''
+                    if start is not None:
+                        entities.setdefault(ent_type, []).append((text[start:end], gmean(temp_probs)))
                         temp_probs = []
-                    entity = token
+                    start, end = offset
                     ent_type = pred[2:]
                     temp_probs.append(prob)
                 # Continue entity
                 else:
-                    entity = ' '.join([entity, token])
                     temp_probs.append(prob)
-            else:
-                if entity:
-                    entities.setdefault(ent_type, []).append((entity, gmean(temp_probs)))
-                    entity = ''
+                    end = offset[1]
+            else:  # 'O' entity or partial wordpiece
+                if start is not None:
+                    entities.setdefault(ent_type, []).append((text[start:end], gmean(temp_probs)))
+                    start = None
                     ent_type = 'O'
                     temp_probs = []
-                if pred == 'O':
-                    continue
-        if entity:
-            entities.setdefault(ent_type, []).append((entity, gmean(temp_probs)))
+        if start is not None:
+            entities.setdefault(ent_type, []).append((text[start:end], gmean(temp_probs)))
 
         return entities
+
+    def _label_snapshot(self, snapshot):
+        """Extract text from most probable entities for each document in the snapshot
+        Returned labels have the structure of
+        labels = {
+            <label name>: {
+                'true_text': <NER extracted text>,
+                'probability': <geometric mean of entity probabilities>
+            },
+            <label name>: {...},
+            ...
+        }
+        Therefore, they need further processing before being returned to the UI or for preparation
+        for comparison to the true labels.
+
+        Parameters
+        ----------
+        snapshot : dict of Document
+            Data to predict on. Will only look at "text" value for this Document
+
+        Returns
+        -------
+        dict of {report_id: labels}
+            Labelled reports with same report_id as the snapshot
+        """
+        df = self.preprocess(snapshot, generate_labels=False)
+        df['report_id'] = df['id'].apply(lambda x: x.split(':')[0])
+
+        # Do predictions
+        all_ents = []
+        for i, row in df.iterrows():
+            entities = self._extract_entities(row.text)
+            all_ents.append(entities)
+        df['entities'] = all_ents
+
+        # Consolidate labels per report
+        labelled_reports = {}
+        for rep_id in snapshot.keys():
+            inds = (df['report_id'] == rep_id)
+            ents = df.loc[inds, 'entities'].values
+            entities = {}
+            for e in ents:
+                for k, v in e.items():
+                    entities.setdefault(k, []).extend(v)
+            labels = {}
+            # Choose the entity with max probability
+            for k, v in entities.items():
+                label_prob = max(v, key=lambda x: x[1])
+                labels[self.entities_to_results[k]] = {
+                    'true_text': label_prob[0],
+                    'probability': label_prob[1]
+                }
+            labelled_reports[rep_id] = labels
+        return labelled_reports
+
+    def predict(self, input_data):
+        """
+        input_data: dict of str
+        model: self
+        """
+        snapshot = {k: Document({'text': v}) for k, v in input_data.items()}
+        labelled_reports = self._label_snapshot(snapshot)
 
     def evaluate(self, test_data_snapshot):
         """Evaluate model performance on held-out test data and record test evaluation metrics"""
@@ -351,17 +419,3 @@ class NerModel(TrainingModel):
         # Transform model outputs into tags for that text
         # Compute metric for that document in the snapshot
         pass
-
-
-def test_model():
-    model = NerModel()
-    model.set_parameters(generate_default_parameters())
-    snapshots = glob_to_snapshot("/Users/thomasfortin/Desktop/School/4A/BME 461/DataSynthesis/Synthesized_Data", extra_level=True)
-    data = model.preprocess(snapshots)
-    train = data.sample(frac=0.8)
-    test = data.drop(train.index)
-    print(model.train(train.reset_index(), test.reset_index()))
-
-
-if __name__ == "__main__":
-    test_model()
