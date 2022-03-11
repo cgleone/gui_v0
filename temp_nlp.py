@@ -4,7 +4,7 @@ import random
 
 modalities = ["X-ray", "MRI", "CT", "Ultrasound"]
 institutions = ["St. Mary's Hospital", "Grand River Hospital", "True North Diagnostics"]
-bodyparts = ["Head and Neck", "Chest", "Abdomen", "Upper Limbs", "Lower Limbs", "Other"]
+bodyparts = ["Head", "Chest", "Spine", "Pelvis", "Abdomen", "Upper Limbs", "Lower Limbs", "Other"]
 clinicians = ["Dr. Grey", "Dr. Yang", "Dr. O'Malley", "Dr. Stevens", "Dr. Karev"]
 dates = ["2022-01-15", "2021-09-22", "2021-04-04", "2020-01-01"]
 

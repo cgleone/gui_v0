@@ -59,12 +59,15 @@ class Model():
                                                       "patella", "acl", "tibia", "fibula", ],
                                       "Chest": ["heart", "cardiac", "lung", "pulmonary", "sternum", "rib", "ribs",
                                                 "diaphragm", "clavicle"],
-                                      "Head and neck": ["head","brain", "carotid", "frontal", "parietal", "temporal",
+                                      "Head": ["head","brain", "carotid", "frontal", "parietal", "temporal",
                                                         "occipital", "sinus", "nose", "dental", "mandible", "occular",
-                                                        "eye", "mouth", "ear", "pituitary", "neck"],
+                                                        "eye", "mouth", "ear", "pituitary"],
+                                      "Spine": ["back", "thoracic", "cervical", "lumbar", "sacrum", "coccyx", "cord",
+                                                "vertebrae"],
+                                      "Pelvis": ["uterus", "ovaries", "ovarian", "fetal", "pregnancy", "pelvic",
+                                                 "uterine", "gestation", "fallopian", "cervix"],
                                       "Abdomen": ["liver", "stomach", "belly", "kidney", "gallbladder", "spleen",
-                                                  "pancreas", "intestine", "colon", "appendix", "uterus", "ovaries",
-                                                  "ovarian", "fetal", "pregnancy", "pelvic", "pelvis"]}
+                                                  "pancreas", "intestine", "colon", "appendix"]}
 
         self.unimportant_words = ["and", "the", "to", "or", "a", "report", "transcript", "at", "for"]
 
@@ -103,7 +106,7 @@ class Model():
 
     def set_filter_options(self):
         self.filter_options = {"modalities": ["X-ray", "MRI", "CT", "Ultrasound"],
-                               "bodyparts": ["Head and neck", "Chest", "Abdomen", "Upper Limbs", "Lower Limbs",
+                               "bodyparts": ["Head", "Chest", "Abdomen", "Pelvis", "Spine", "Upper Limbs", "Lower Limbs",
                                              "Other"],
                                "exam_date": ["<6mos", "6mos-1yr", "1yr-5yrs", ">5yrs"]}
 
@@ -132,23 +135,28 @@ class Model():
                               'MRI': physician_preferences[2],
                               'CT': physician_preferences[3],
                               'Ultrasound': physician_preferences[4],
-                              'Head and Neck': physician_preferences[5],
+                              'Head': physician_preferences[5],
                               'Chest': physician_preferences[6],
                               'Abdomen': physician_preferences[7],
                               'Upper Limbs': physician_preferences[8],
                               'Lower Limbs': physician_preferences[9],
-                              'Other': physician_preferences[10]}
+                              'Other': physician_preferences[10],
+                              'Spine': physician_preferences[11],
+                              'Pelvis': physician_preferences[12]}
 
         self.modality_display_names = {'X-ray': physician_preferences[1],
                                        'MRI': physician_preferences[2],
                                        'CT': physician_preferences[3],
                                        'Ultrasound': physician_preferences[4]}
-        self.bodypart_display_names = {'Head and Neck': physician_preferences[5],
+        self.bodypart_display_names = {'Head': physician_preferences[5],
                                        'Chest': physician_preferences[6],
                                        'Abdomen': physician_preferences[7],
+                                       'Spine': physician_preferences[11],
+                                       'Pelvis': physician_preferences[12],
                                        'Upper Limbs': physician_preferences[8],
                                        'Lower Limbs': physician_preferences[9],
-                                       'Other': physician_preferences[10]}
+                                       'Other': physician_preferences[10]
+                                       }
 
     def set_current_institutions(self):
         institutions = self.db_connection.get_institutions_in_db(self.current_physician_ID)
@@ -536,7 +544,8 @@ class Model():
 
     def set_category_dict(self):
         self.category_dict = {"Modality": ["MRI", "CT", "Ultrasound", "X-ray"],
-                              "Bodypart": ["Head and Neck", "Chest", "Abdomen", "Upper Limbs", "Lower Limbs", "Other"],
+                              "Bodypart": ["Head", "Chest", "Abdomen", "Pelvis", "Spine", "Upper Limbs", "Lower Limbs",
+                                           "Other"],
                               "Institution": ["Hospital", ]}
 
 

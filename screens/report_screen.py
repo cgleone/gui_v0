@@ -528,9 +528,11 @@ class ReportScreen(QWidget):
         self.date_options = {"<6mos": QCheckBox("< 6mos"),
                                  "6mos-1yr": QCheckBox("6mos - 1yr"), "1yr-5yrs": QCheckBox("1yr - 5yrs"),
                              ">5yrs": QCheckBox("> 5 yrs")}
-        self.bodypart_options = {"Head and Neck": QCheckBox(display_names["Head and Neck"]),
+        self.bodypart_options = {"Head": QCheckBox(display_names["Head"]),
                                  "Chest": QCheckBox(display_names["Chest"]),
                                  "Abdomen": QCheckBox(display_names["Abdomen"]),
+                                 "Pelvis": QCheckBox(display_names["Pelvis"]),
+                                 "Spine": QCheckBox(display_names["Spine"]),
                                  "Upper Limbs": QCheckBox(display_names["Upper Limbs"]),
                                  "Lower Limbs": QCheckBox(display_names["Lower Limbs"]),
                                  "Other": QCheckBox(display_names["Other"])}
