@@ -8,6 +8,47 @@ import torch
 import pandas as pd
 
 
+TRUE_BODY_PART_LABELS = {
+    'CHEST ONLY': 'CHEST',
+    'CHEST': 'CHEST',
+    'RENAL': 'ABDOMEN',
+    'LIVER OR GALLBLADDER': 'ABDOMEN',
+    'ABDOMEN': 'ABDOMEN',
+    'ABD': 'ABDOMEN',
+    'SINUS/MANDIBLE/MAXILLOFACIAL': 'HEAD',
+    'HEAD': 'HEAD',
+    'PELVIS': 'PELVIS',
+    'ABD/PEL': 'ABDOMEN PELVIS',
+    'ABD & PELVIS': 'ABDOMEN PELVIS',
+    'C-SPINE': 'SPINE',
+    'CERVICAL SPINE': 'SPINE',
+    'T-SPINE': 'SPINE',
+    'L-SPINE': 'SPINE',
+    'BABYGRAM CHEST & ABD': 'CHEST ABDOMEN',
+    'CXR & PELVIS': 'CHEST PELVIS'}
+
+TRUE_MODALITY_LABELS = {
+    'CT': 'CT',
+    'CTA': 'CT',
+    'U.S.': 'US',
+    'NEONATAL HEAD PORTABLE': 'US',
+    'US': 'US',
+    'DUPLEX': 'US',
+    'MR': 'MRI',
+    'X-RAY, AP & LAT': 'X-RAY',
+    'X-RAY, SUPINE & ERECT': 'X-RAY',
+    'X-RAY, PORTABLE': 'X-RAY',
+    'X-RAY, PRE-OP PA & LAT': 'X-RAY',
+    'X-RAY, BABYGRAM': 'X-RAY',
+    'X-RAY, AP CXR': 'X-RAY',
+    'X-RAY, nan': 'X-RAY',
+    'X-RAY, PA & LAT': 'X-RAY',
+    'X-RAY, PORTABLE AP': 'X-RAY',
+    'X-RAY, PORT.': 'X-RAY',
+    'X-RAY, CHEST (SINGLE VIEW)': 'X-RAY',
+    'SUPINE ONLY': None}
+
+
 def generate_default_parameters(
     max_seq_len=512,
     stride=10,
