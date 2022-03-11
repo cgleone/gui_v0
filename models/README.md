@@ -59,14 +59,14 @@ model.predict(input_data)
 
 Both result and training label dictionaries have the same structure.
 
-`['modality', 'body_part', 'dr_name', 'clinic_name', 'date_of_procedure']`
+`['Modality', 'Body Part', 'Doctor Name', 'Clinic Name', 'Date Taken']`
 
 ### Highest level keys:
-- `body_part`: This should be the body part imaged
-- `date_of_procedure`: This should be the date the image was taken
-- `dr_name`: This should be the radiologist's name
-- `imaging_clinic`: This should the be the institution the imaging took place at
-- `modality`: This should be the imaging modality
+- `Body Part`: This should be the body part imaged
+- `Date Taken`: This should be the date the image was taken
+- `Doctor Name`: This should be the radiologist's name
+- `Clinic Name`: This should the be the institution the imaging took place at
+- `Modality`: This should be the imaging modality
 - `metadata`: Other relevant labels
 
 ### Second level keys:
@@ -76,15 +76,15 @@ Both result and training label dictionaries have the same structure.
 
 `label` is required for both results and training labels. All other keys are optional and used as required for trainining and model output tasks.
 
-For example, if the body part imaged was the pituitary gland, the label would be `head` and the text would be `Pituitary gland`.
+For example, if the body part imaged was the pituitary gland, the label would be `HEAD` and the text would be `Pituitary gland`.
 
 For body part, we have the following classes:
 
-`['head', 'spine', 'chest', 'abdomen', 'upper_limbs', 'lower_limbs', 'other']`
+`['HEAD', 'SPINE', 'CHEST', 'ABDOMEN', 'PELVIS', 'UPPER LIMBS', 'LOWER LIMBS', None]`
 
 For imaging modality, we have the following classes:
 
-`['mri', 'xray', 'ct', 'ultrasound']`
+`['X-RAY', 'CT', 'MRI', 'US', None]`
 
 For dates, we will report the label in the following format:
 
@@ -103,24 +103,24 @@ For metadata, any other labels of interest generated will go in this dictionary 
 
 ```
 labels = {
-    'body_part': {
-        'label': 'abdomen',
+    'Body Part': {
+        'label': 'ABDOMEN',
         'text': 'lower abdomen'
     },
-    'date_of_procedure': {
+    'Date Taken': {
         'label': '2022-01-14',
         'text': 'Jan 14, 2022'
     },
-    'dr_name': {
+    'Doctor Name': {
         'label': 'Dr. Kevin Samson',
         'text': 'Dr. Samson'
     },
-    'imaging_clinic': {
+    'Clinic Name': {
         'label': 'Waterloo Radiology Clinic',
         'text': 'Waterloo Radiology Clinic'
     }
-    'modality': {
-        'label': 'ct'
+    'Modality': {
+        'label': 'CT'
         'text': 'CT'
     },
     'metadata': {
@@ -134,13 +134,32 @@ labels = {
 ## Result Dictionaries Example
 ```
 outputs = {
-    'dr_name': {'label': 'Dr. Samson'},
-    'date_of_procedure': {'label': '2022-01-14'},
-    'modality': {'label': 'ct'},
-    'body_part': {'label': 'abdomen'},
-    'imaging_clinic': {'label': 'Waterloo Radiology Clinic'}
+    'Doctor Name': {'label': 'Dr. Samson'},
+    'Date Taken': {'label': '2022-01-14'},
+    'Modality': {'label': 'CT'},
+    'Body Part': {'label': 'ABDOMEN'},
+    'Clinic Name': {'label': 'Waterloo Radiology Clinic'}
 }
 results = {'000-000': outputs}
+```
+
+## UI Output
+For the UI, models will not return any additional data and only output in the following structure:
+```
+results = {
+    'document_id_1': {
+        'Doctor Name': 'Dr. Samson',
+        'Date Taken': '2022-01-14',
+        'Modality': 'CT',
+        'Body Part': 'ABDOMEN',
+        'Clinic Name': 'Waterloo Radiology Clinic'
+    },
+    'document_id_2': {
+        'Doctor Name': ...,
+        'Date Taken': ...,
+        ...
+    }
+}
 ```
 
 # Training Model API
@@ -204,9 +223,10 @@ The following terminology applies to data transformations.
     - held out test data snapshot &rarr; valid model data: preprocessing
     - held out test data &rarr; predicted tags: inferencing
     - model outputs &rarr; tags: output processing
+- UI input dict &rarr; UI output labels: **predict**
 
 Therefore, the `preprocess()`, `train()`, and `evaluate()` methods should take those inputs and produce those outputs as specified above.
-
+The `predict()` method is reserved for inference with the UI.
 
 ## Models need stuff
 `LEARNING_RATE, MAX_SEQ_LEN, HF_URL, RANDOM_SEED, BATCH_SIZE, MAX_GRAD_NORM, DATA_LEN, EPOCHS, LABELS_TO_CLASSES, CLASSES_TO_LABELS`
