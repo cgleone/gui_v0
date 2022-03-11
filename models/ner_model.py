@@ -1,7 +1,7 @@
 from .training_model_api import TrainingModel
 from .preprocessing import get_iob_entity_encoding, ner_preprocess, text_split_preprocess, df_to_dataloader, glob_to_snapshot
 from .preprocessing import entity_labels
-from transformers import AutoTokenizer, BertForTokenClassification
+from transformers import AutoTokenizer, AutoModelForTokenClassification
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.model_selection import train_test_split
 from seqeval.metrics import classification_report
@@ -47,7 +47,7 @@ class NerModel(TrainingModel):
             print('Loading nn from AWS (this could take a while)...')
             self.nn = load_nn_from_aws(self.parameters['trained_model_url'])
         else:
-            self.nn = BertForTokenClassification.from_pretrained(self.base_model_url, num_labels=self.num_labels)
+            self.nn = AutoModelForTokenClassification.from_pretrained(self.base_model_url, num_labels=self.num_labels)
         self.nn.to(self.device)
         return self.nn
 
