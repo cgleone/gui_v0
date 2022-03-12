@@ -48,10 +48,14 @@ class NerModel(TrainingModel):
         self.optimizer = torch.optim.Adam(params=self.nn.parameters(), lr=self.learning_rate)
 
     def _init_nn(self):
-        """Initialize the PyTorch BERT nn and put onto device"""
-        if self.parameters.get('trained_model_url', None):
-            print('Loading nn from AWS (this could take a while)...')
-            self.nn = load_nn_from_aws(self.parameters['trained_model_url'])
+        """Initialize the nn and put onto device
+        If trained_model_url is from s3, it will load from s3. However, it can also load local files
+        If we don't get a pre-trained model, load from a base model and make a token classifier
+        """
+        if path := self.parameters.get('trained_model_url', None):
+            if path.startswith('s3://'):
+                print('Loading nn from AWS (this could take a while)...')
+            self.nn = load_nn_from_aws(path)
         else:
             self.nn = AutoModelForTokenClassification.from_pretrained(self.base_model_url, num_labels=self.num_labels)
         self.nn.to(self.device)
