@@ -48,6 +48,7 @@ TRUE_MODALITY_LABELS = {
     'X-RAY, CHEST (SINGLE VIEW)': 'X-RAY',
     'SUPINE ONLY': None}
 
+CLINIC_NAME_LIST = pd.read_csv('gui_v0/institution_list.csv')['Names'].tolist()
 
 def generate_default_parameters(
     max_seq_len=512,
