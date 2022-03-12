@@ -6,7 +6,6 @@ from .utils import load_nn_from_aws
 
 from transformers import AutoTokenizer, AutoModelForTokenClassification
 from sklearn.metrics import accuracy_score, confusion_matrix
-from sklearn.model_selection import train_test_split
 from seqeval.metrics import classification_report
 from scipy.stats.mstats import gmean
 from thefuzz import process
