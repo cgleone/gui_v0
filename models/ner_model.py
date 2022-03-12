@@ -1,13 +1,18 @@
 from .training_model_api import TrainingModel
 from .preprocessing import get_iob_entity_encoding, ner_preprocess, text_split_preprocess, df_to_dataloader, Document
 from .preprocessing import entity_labels
+from .utils import CLINIC_NAME_LIST, TRUE_MODALITY_LABELS, TRUE_BODY_PART_LABELS
+from .utils import load_nn_from_aws
+
 from transformers import AutoTokenizer, AutoModelForTokenClassification
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.model_selection import train_test_split
 from seqeval.metrics import classification_report
 from scipy.stats.mstats import gmean
+from thefuzz import process
+import dateparser
+import warnings
 import torch
-from .utils import generate_default_parameters, load_nn_from_aws
 
 class NerModel(TrainingModel):
     """
@@ -17,13 +22,7 @@ class NerModel(TrainingModel):
     def __init__(self):
         super().__init__()
         self.entity_labels = entity_labels
-        self.entities_to_results = {
-            'BOP': 'body_part',
-            'DOP': 'date_of_procedure',
-            'DRN': 'dr_name',
-            'IMC': 'clinic_name',
-            'MOD': 'modality'
-        }
+        self.entities_to_results = {v: k for k, v in self.entity_labels.items()}
 
     def set_parameters(self, parameters):
         """Set parameters dictionary and setup model, tokenizer, and optimizer
@@ -289,7 +288,7 @@ class NerModel(TrainingModel):
             padding='max_length',
             truncation=True,
             max_length=self.max_seq_len,
-            return_offset_mapping=True,
+            return_offsets_mapping=True,
             return_tensors="pt")
 
         # Forward pass
@@ -309,7 +308,7 @@ class NerModel(TrainingModel):
 
             pred_labels = [ids_to_labels[i] for i in pred_inds]
             tokens = self.tokenizer.convert_ids_to_tokens(ids.flatten().tolist())
-            offsets = inputs['offset_mapping'].flatten().tolist()
+            offsets = inputs['offset_mapping'].squeeze().tolist()
 
         # Extract entities from indices
         entities = {}
@@ -352,14 +351,13 @@ class NerModel(TrainingModel):
         Returned labels have the structure of
         labels = {
             <label name>: {
-                'true_text': <NER extracted text>,
+                'label': <label to report to UI and evaluation>,
+                'true text': <NER extracted text>,
                 'probability': <geometric mean of entity probabilities>
             },
             <label name>: {...},
             ...
         }
-        Therefore, they need further processing before being returned to the UI or for preparation
-        for comparison to the true labels.
 
         Parameters
         ----------
@@ -390,32 +388,83 @@ class NerModel(TrainingModel):
             for e in ents:
                 for k, v in e.items():
                     entities.setdefault(k, []).extend(v)
-            labels = {}
-            # Choose the entity with max probability
-            for k, v in entities.items():
-                label_prob = max(v, key=lambda x: x[1])
-                labels[self.entities_to_results[k]] = {
-                    'true_text': label_prob[0],
-                    'probability': label_prob[1]
-                }
+            labels = self._labels_from_entities(entities)
             labelled_reports[rep_id] = labels
         return labelled_reports
 
-    def predict(self, input_data):
+    def _labels_from_entities(self, entities):
+        """Generate labels dict from extracted entities
+        'label' matches Clinic Name, Modality, and Body Part, fuzzy match to closest actual answer
+        and converts date to 'YYYY-MM-DD' format.
+        'true text' is the exact text that NER extracted
+        'probability' is the probability associated with that entitiy
+
+        Parameters
+        ----------
+        entities : dict
+            dict with keys as entity types and values as a list of (entity, probability)
+
+        Returns
+        -------
+        dict
+            labels in output format with keys self.RESULT_KEYS and values as dicts with keys
+            'label', 'true text', 'probabability'
         """
-        input_data: dict of str
-        model: self
+        labels = {}
+        # Choose the entity with max probability
+        for k, v in entities.items():
+            label_prob = max(v, key=lambda x: x[1])
+            labels[self.entities_to_results[k]] = {
+                'true text': label_prob[0].replace('##', ''),  # Trim excess ## from partial wordpieces
+                'probability': label_prob[1]
+            }
+        # Fill in label keys, use None if no entities were extracted
+        for k in self.RESULT_KEYS:
+            labels.setdefault(k, {}).setdefault('label', labels[k].get('true text', None))
+
+        # Parse date into right format
+        if date := labels['Date Taken']['label']:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                labels['Date Taken']['label'] = dateparser.parse(date).strftime('%Y-%m-%d')
+
+        # Find closest clinic name
+        if clinic_name := labels['Clinic Name']['label']:
+            match, _ = process.extractOne(clinic_name, CLINIC_NAME_LIST)
+            labels['Clinic Name']['label'] = match
+
+        # Find closest string match and convert to category
+        for k, true_labels in zip(['Modality', 'Body Part'], [TRUE_MODALITY_LABELS, TRUE_BODY_PART_LABELS]):
+            if true_text := labels[k].get('true text', None):
+                match, _ = process.extractOne(true_text, true_labels.keys())
+                labels[k]['label'] = true_labels[match]
+        return labels
+
+    def predict(self, input_data):
+        """Predict labels on input data dict
+
+        Parameters
+        ----------
+        input_data : dict
+            Dict with keys as report IDs and values as the text from those reports
+
+        Returns
+        -------
+        dict
+            Dict of results. Keys are same report IDs, values are the labels the NER model predicts
+            labels in format {'Doctor Name': 'Dr. K. Samson', 'Modality': 'X-RAY', ...}
         """
         snapshot = {k: Document({'text': v}) for k, v in input_data.items()}
         labelled_reports = self._label_snapshot(snapshot)
+        # Take only the 'label' key to return to UI
+        output = {}
+        for rep_id, labels in labelled_reports.items():
+            temp = {k: v['label'] for k, v in labels.items()}
+            output[rep_id] = temp
+        return output
 
     def evaluate(self, test_data_snapshot):
         """Evaluate model performance on held-out test data and record test evaluation metrics"""
-        # Transform data snapshot into training data
-        # For each document in the snapshot
-        #    Pre-process text into correct format (splitting if needed)
-        #    Labels prepared to compare to tags extracted
-        # Run inference for the entire text
-        # Transform model outputs into tags for that text
-        # Compute metric for that document in the snapshot
+        labelled_reports = self._label_snapshot(test_data_snapshot)
+        # TODO: Compute metric for that document in the snapshot
         pass
