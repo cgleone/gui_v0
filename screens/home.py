@@ -34,21 +34,30 @@ class HomeScreen(QWidget):
         self.add_new_patient_button.setFont(font)
         self.quit_button.setFont(font)
 
-        # self.select_button.setStyleSheet("background-color: white;"
-        #                                  "border-radius: 10px;"
-        #                                  "color: grey;")
-        # self.add_new_patient_button.setStyleSheet("background-color: white;"
-        #                                           "border-radius: 10px;"
-        #                                           "color: grey;")
-        # self.quit_button.setStyleSheet("background-color: white;"
-        #                                "border-radius: 10px;"
-        #                                "border-color: red;"
-        #                                "border-width: 5px;"
-        #                                "color: #708090;"
-        #                                "padding: 4px")
+        self.select_button.setStyleSheet(("color: dark grey; "
+                                        "background-color: white; "
+                                        "font: bold 32px;"
+                                        "border-style: outset; "
+                                        "border-width: 2px; "
+                                        "border-radius: 10px;"
+                                        "border-color: black; "
+                                        "min-width: 10em; "
+                                        "padding: 6px;"))
+        self.add_new_patient_button.setStyleSheet("background-color: white;"
+                                                  "border-radius: 10px;"
+                                                  "color: grey;")
+        self.quit_button.setStyleSheet(("color: white; "
+                                        "background-color: grey; "
+                                        "font: bold 32px;"
+                                        "border-style: outset; "
+                                        "border-width: 2px; "
+                                        "border-radius: 10px;"
+                                        "border-color: black; "
+                                        "min-width: 10em; "
+                                        "padding: 6px;"))
 
         self.layout().addWidget(self.select_button)
-        self.layout().addWidget(self.add_new_patient_button)
+       # self.layout().addWidget(self.add_new_patient_button)
         self.layout().addWidget(self.quit_button)
 
         return

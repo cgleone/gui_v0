@@ -1,6 +1,6 @@
 
 from PyQt5.QtGui import QBrush, QColor, QFont
-from PyQt5.QtWidgets import QWidget, QTableWidgetItem, QHeaderView, QTableWidget, QPushButton, QVBoxLayout, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QTableWidgetItem, QHeaderView, QTableWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel
 from PyQt5.QtCore import Qt
 
 
@@ -8,16 +8,20 @@ class PatientSelectScreen(QWidget):
     def __init__(self):
         super().__init__()
 
+        instruction_label = QLabel("Click on a patient below to view their imaging reports.")
+        instruction_label.setStyleSheet("color: #000000; font: bold 16px;")
+
         layout = QVBoxLayout()
         self.setLayout(layout)
         top_layout = QHBoxLayout()
         self.layout().addLayout(top_layout)
+        self.layout().addWidget(instruction_label)
+
         self.layout().setAlignment(Qt.AlignCenter)
-        self.layout().setSpacing(50)
+        self.layout().setSpacing(30)
         #self.layout().setContentsMargins(0, 50, 0, 0)
 
         self.create_patient_table()
-
         self.back_button = QPushButton("Back to Main Menu")
         self.back_button.setFixedSize(200, 30)
         self.add_new_patient_button = QPushButton("Add New Patient")

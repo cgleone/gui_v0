@@ -18,6 +18,9 @@ class ReportScreen(QWidget):
 
         self.patient_name = "Default"
         self.patient_label = QLabel("Patient: Default")
+        self.patient_label.setAlignment(Qt.AlignCenter)
+        self.patient_label.setContentsMargins(0, 0, 0, 25)
+        self.patient_label.setStyleSheet("color: #000000; font: bold 18px;")
         self.no_results = QLabel("No reports to show")
         self.correction_instructions = QLabel("Click on a report to edit its labels")
         self.correction_instructions.setStyleSheet("color: #8b0000; font: bold 18px;")
@@ -69,8 +72,8 @@ class ReportScreen(QWidget):
 
 
     def populate_vertical_main(self):
-        self.vertical_main.addLayout(self.title_layout)
         self.vertical_main.addLayout(self.settings_layout)
+        self.vertical_main.addLayout(self.title_layout)
         self.vertical_main.addLayout(self.search_layout)
         self.vertical_main.addLayout(self.filters_layout)
         self.vertical_main.addWidget(self.no_results)
@@ -223,9 +226,9 @@ class ReportScreen(QWidget):
 
     def populate_title_layout(self):
         # self.title_layout.addWidget(QLabel("Patient Portal Demo"))
-        self.title_layout.addWidget(self.patient_label, 2)
-        self.title_layout.addWidget(self.back_button, 1)
-        self.title_layout.addWidget(self.main_menu_button, 1)
+        self.title_layout.addWidget(self.patient_label, Qt.AlignCenter)
+        # self.title_layout.addWidget(self.back_button, 1)
+        # self.title_layout.addWidget(self.main_menu_button, 1)
 
     def populate_search_layout(self):
         self.search_layout.addWidget(self.search_bar)
@@ -234,8 +237,8 @@ class ReportScreen(QWidget):
         self.search_layout.addWidget(self.import_button)
 
     def populate_settings_layout(self):
-        self.settings_layout.addStretch(1)
-        self.settings_layout.addWidget(self.settings_button)
+        self.settings_layout.addWidget(self.back_button, 1, Qt.AlignLeft)
+        self.settings_layout.addWidget(self.settings_button, 1, Qt.AlignRight)
 
     def populate_label_correction_layout(self):
         self.label_correction_layout.addWidget(self.multi_file_select_button, 0, alignment=Qt.AlignLeft)
