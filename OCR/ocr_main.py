@@ -14,21 +14,19 @@ def get_text(file):
     path = 'OCR/reports_temp/' + file
 
     img = cv2.imread(path)
-    img = pre.deskew(img) # always leave on
     img = pre.greyscale(img) # always leave on
-    img = pre.rescale(img, 1.5)
 
     # NOW MAKE IT A PILLOW
     pillow_path = save_for_pillowing(img, file)
     pil_img = get_pil_img(pillow_path)
-    pil_img = pre.sharpen(pil_img, 3)
     pil_img = pre.brighten(pil_img, 1.5)
-    pil_img = pre.contrast(pil_img, 2.5)
+    pil_img = pre.sharpen(pil_img, 3)
+    pil_img = pre.contrast(pil_img, 5)
 
     # BACK TO OPENCV NOW
     img = np.array(pil_img)  # alrighty done it's a opencv now
-
-    img = pre.thresholding(img) # always leave on
+    img = pre.deskew(img)
+    img = pre.rescale(img, 1.5)
     img = pre.gaussian_blur(img, 3)
 
     converted = pytesseract.image_to_string(img)

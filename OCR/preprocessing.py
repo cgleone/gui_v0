@@ -143,8 +143,8 @@ def get_skew_angle(image, deskew_angles):
     new_image = image.copy()
     image_area = new_image.size
 
-    gray = cv2.cvtColor(new_image, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (9, 9), 0)
+#    gray = cv2.cvtColor(new_image, cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(image, (9, 9), 0)
     thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
 
 
