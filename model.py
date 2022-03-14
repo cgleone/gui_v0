@@ -496,11 +496,21 @@ class Model():
             self.db_connection.delete_report_from_db(file_ID)
 
     def get_current_report_labels(self, report_ID):
-        self.current_report_labels = [self.db_connection.get_report_modality(report_ID)[0][0],
-                                 self.db_connection.get_report_bodypart(report_ID)[0][0],
-                                 self.db_connection.get_report_institution(report_ID)[0][0],
-                                 self.db_connection.get_report_clinician(report_ID)[0][0],
-                                 self.db_connection.get_report_date(report_ID)[0][0]]
+        raw_current_labels = [self.db_connection.get_report_modality(report_ID),
+                                 self.db_connection.get_report_bodypart(report_ID),
+                                 self.db_connection.get_report_institution(report_ID),
+                                 self.db_connection.get_report_clinician(report_ID),
+                                 self.db_connection.get_report_date(report_ID)]
+        self.current_report_labels = []
+        for label in raw_current_labels:
+            try:
+                if label is None:
+                    self.current_report_labels.append(" ")
+                else:
+                    self.current_report_labels.append(label[0][0])
+            except TypeError:
+                self.current_report_labels.append(" ")
+
         return self.current_report_labels
 
 
