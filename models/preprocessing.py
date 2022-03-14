@@ -171,7 +171,7 @@ def clean_text(text):
     return mask.sub('[MASK]', text)
 
 
-def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path, label_type='all'):
+def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path, type_label='all'):
     """
     Creates SQuAD formatted training data from a given snapshot. Finds true text in the contents of the reports and saves
     the SQuAD format QA pairs into a JSON file.
@@ -192,11 +192,11 @@ def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path, label_type='
                 'Body Part': "What is the body part?",
                 'Modality': "What is the imaging modality?"
     }
-    if label_type != 'all':
-        if label_type in questions.keys():
-            questions = {label_type: questions[label_type]}
+    if type_label != 'all':
+        if type_label in questions.keys():
+            questions = {type_label: questions[type_label]}
         else: 
-            raise ValueError("WARNING: label_type not found. Choose one of Doctor Name, Date Taken, Clinic Name, Body Part or Modality")
+            raise ValueError("WARNING: type_label not found. Choose one of Doctor Name, Date Taken, Clinic Name, Body Part or Modality")
 
     
     squad = []
@@ -212,9 +212,9 @@ def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path, label_type='
     for key, doc in snapshot.items():
         relevant_labels = doc.get_labels_to_classify()
 
-        if label_type != 'all':
-            if label_type in relevant_labels.keys():
-                relevant_labels = {label_type: relevant_labels[label_type]}
+        if type_label != 'all':
+            if type_label in relevant_labels.keys():
+                relevant_labels = {type_label: relevant_labels[type_label]}
             else: 
                 raise ValueError("WARNING: label_type not found in Relevant Labels. Choose one of Doctor Name, Date Taken, Clinic Name, Body Part or Modality")
 

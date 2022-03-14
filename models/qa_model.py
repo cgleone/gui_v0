@@ -24,7 +24,7 @@ class QaModel(TrainingModel):
         """
         super().set_parameters(parameters)
         self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_url)
-        self.reader = FARMReader(self.qaModel, use_gpu=True, num_processes=1, return_no_answer=True, top_k=1)
+        self.reader = FARMReader(self.qaModel, use_gpu=True, num_processes=1, return_no_answer=True, top_k=3)
         # Load a pre-trained network saved on AWS
         if self.parameters.get('trained_model_url', None):
             print('Loading nn from AWS (this could take a while)...')
@@ -56,7 +56,7 @@ class QaModel(TrainingModel):
 
         return output
 
-    def train(self, dev_split):
+    def train(self, data_snapshot, dev_split):
         """Train the model based on the input parameters
         Trains self.nn for specified number of epochs, generates training and validation metrics
 
@@ -71,29 +71,50 @@ class QaModel(TrainingModel):
         -------
         dict
             self.metrics dictionary
-        """
+        """,
         head_tail = os.path.split(self.json_save_path)
         data_dir = head_tail[0]
         train_filename = head_tail[1]
         self.reader.train(data_dir=data_dir, train_filename=train_filename, use_gpu=True, 
                 n_epochs=self.epochs, max_seq_len=self.max_seq_len, dev_split=dev_split, learning_rate=self.learning_rate, 
                 batch_size=self.batch_size, evaluate_every=100)
-        return
+        
+        self.metrics = self.evaluate(data_snapshot)
+        
+        return self.metrics
 
-    def _validate(self, val_dataloader, epoch):
+    def _validate(self, data_snapshot):
+        
         pass
 
-    def evaluate(self, test_data_snapshot):
+    def evaluate(self, data_snapshot, dev = False):
         """Evaluate model performance on held-out test data and record test evaluation metrics"""
-        pass
+        label_types = ['Doctor Name', 'Date Taken', 'Clinic Name', 'Body Part', 'Modality']
+        head_tail = os.path.split(self.json_save_path_eval)
+        data_dir = head_tail[0]
+        val_filename = head_tail[1]
 
-    def predict(self, input_data):
+        metrics = {}
+        
+        for label_type in label_types:
+            self.preprocess(data_snapshot, True, label_type)
+            eval_metrics = self.reader.eval_on_file(data_dir, val_filename, 'cuda')
+            metrics[label_type] = eval_metrics
+        
+        if dev:
+            self.metrics.setdefault('validation', []).append(metrics)
+        else: 
+            self.metrics.setdefault('held out test', []).append(metrics)
+       
+        return metrics
+
+    def predict(self, input_docs):
         """
         Do inference predictions on list of input texts.
 
         Parameters:
         -----------
-        input_data: dict of str
+        input_docs: List of haystack Docs
             Input texts and associated IDs as keys
 
         Returns:
@@ -101,6 +122,7 @@ class QaModel(TrainingModel):
         results: dict of dict
             Dictionary of result dictionaries for each input text associated with original IDs
         """
-        self.update_inputs(input_data)
+
+        self.update_inputs(input_docs)
         self.update_results()
         return self.get_results()
