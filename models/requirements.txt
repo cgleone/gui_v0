@@ -3,18 +3,25 @@ numpy
 pandas
 scipy
 scikit-learn
-torch
+torch>=1.8
 seaborn
 matplotlib
 jupyter
 
 # NLP
-nltk
-transformers
-farm-haystack
+# nltk
+transformers>=4.0
+farm-haystack>=1.1
 thefuzz
+
+# Models
+# en-core-sci-md
 
 # Misc
 dateparser
-python-Levenshtein
+# python-Levenshtein
 tqdm
+seqeval
+boto3
+smart-open
+more-itertools
