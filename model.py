@@ -8,8 +8,8 @@ import pandas as pd
 from PyQt5.QtCore import Qt
 import datetime
 from models.minimal_model import MinimalModel
-
-
+from models.ner_model import NerModel
+from models.preprocessing import Document
 
 
 
@@ -17,7 +17,7 @@ class Model():
 
     def __init__(self):
         self.db_connection = DB_Connection()
-        self.nlp_model = MinimalModel()
+        self.nlp_model = NerModel()
         self.set_nlp_params()
 
         self.current_patient_ID = None
@@ -81,8 +81,9 @@ class Model():
         self.read_csv()
 
     def set_nlp_params(self):
-        with open('models/minimal_model_data/parameters.pkl', 'rb') as f:
+        with open( '/Users/cathleenl/Documents/param_files/ner_params', 'rb') as f:
             parameters = pickle.load(f)
+        parameters['trained_model_url'] = '/Users/cathleenl/Documents/param_files/ner_model'
         self.nlp_model.set_parameters(parameters)
 
     def update_clinician_list(self):
@@ -226,13 +227,28 @@ class Model():
         text = file.read()
         file.close()
 
-        nlp_data = self.nlp_model.predict({0: text})[0]
-        labels = [nlp_data['modality'], nlp_data['body_part'], nlp_data['clinic_name'],
-                  nlp_data['dr_name'], nlp_data['date_of_procedure']]
+        snapshot = {k: Document({'text': v}) for k, v in {'0': text}.items()}
+        labelled_reports = self.nlp_model._label_snapshot(snapshot)
+        print("labelled reports: \n")
+        print(labelled_reports)
+        nlp_data = self.nlp_model.predict({'0': text})['0']
+        labels = [nlp_data['Modality'], nlp_data['Body Part'], nlp_data['Clinic Name'],
+                  nlp_data['Doctor Name'], nlp_data['Date Taken']]
+        print(nlp_data)
+        formatted_labels = [labels[0]]
+        for label in [labels[1], labels[2], labels[3]]:
+            if label is not None:
+                new_label = str.title(str.lower(label))
+                formatted_labels.append(new_label)
+            else:
+                formatted_labels.append(None)
+
+        formatted_labels.append(labels[4])
+
         # mod_display = self.get_display_name(labels[0])
         # bp_display = self.get_display_name(labels[1])
         # label_args = [self.current_patient_ID, report_id] + labels + [mod_display, bp_display]
-        label_args = [self.current_patient_ID, report_id] + labels
+        label_args = [self.current_patient_ID, report_id] + formatted_labels
         return label_args
 
     def set_filters(self, modalities, bodyparts, dates):

@@ -485,7 +485,7 @@ class ReportScreen(QWidget):
     def show_directory(self):
         # self.explorer = QFileDialog.getOpenFileName(self, 'Open File', '/Users/cathleenl/Documents/data_stuff')[0]
         self.explorer = \
-        QFileDialog.getOpenFileName(self, 'Open File', '/Users\Wong\PycharmProjects\ocr_testing\pics')[0]
+        QFileDialog.getOpenFileName(self, 'Open File', '/Users/cathleenl/Documents/ocr_validation/')[0]
 
     def create_dialog_for_later(self):
         self.dialog = QDialog()

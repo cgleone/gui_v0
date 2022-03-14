@@ -30,6 +30,7 @@ def get_text(file):
     img = pre.gaussian_blur(img, 3)
 
     converted = pytesseract.image_to_string(img)
+    cv2.imwrite('OCR/post_processing_images/' + file, img)
 
     os.remove(path)  # removes the prepped image
     return converted

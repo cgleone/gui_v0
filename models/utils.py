@@ -48,7 +48,7 @@ TRUE_MODALITY_LABELS = {
     'X-RAY, CHEST (SINGLE VIEW)': 'X-RAY',
     'SUPINE ONLY': None}
 
-CLINIC_NAME_LIST = pd.read_csv('gui_v0/institution_list.csv')['Names'].tolist()
+CLINIC_NAME_LIST = pd.read_csv('/Users/cathleenl/PycharmProjects/FYDP_GUI_v0/gui_v0/institution_list.csv')['Names'].tolist()
 
 def generate_default_parameters(
     max_seq_len=512,
@@ -230,7 +230,7 @@ def load_nn_from_aws(s3_url):
     """
     client = boto3.client('s3')
     with open(s3_url, 'rb', transport_params={'client': client}) as f:
-        nn = torch.load(f)
+        nn = torch.load(f, map_location=torch.device('cpu'))
     return nn
 
 

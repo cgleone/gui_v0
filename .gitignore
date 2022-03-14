@@ -14,6 +14,7 @@ report_texts/*
 reports_temp/*
 reports/*
 OCR/testing_texts/*
+OCR/post_processing_images/*
 
 # exception to the rule
 report_texts/.gitkeep
