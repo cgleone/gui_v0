@@ -81,9 +81,9 @@ class Model():
         self.read_csv()
 
     def set_nlp_params(self):
-        with open( '/Users/cathleenl/Documents/param_files/ner_params', 'rb') as f:
+        with open( '/Users/Wong/NLP_stuff/NER_params', 'rb') as f:
             parameters = pickle.load(f)
-        parameters['trained_model_url'] = '/Users/cathleenl/Documents/param_files/ner_model'
+        parameters['trained_model_url'] = '/Users/Wong/NLP_stuff/NER_model'
         self.nlp_model.set_parameters(parameters)
 
     def update_clinician_list(self):
@@ -235,6 +235,8 @@ class Model():
         labels = [nlp_data['Modality'], nlp_data['Body Part'], nlp_data['Clinic Name'],
                   nlp_data['Doctor Name'], nlp_data['Date Taken']]
         print(nlp_data)
+        if labels[0]=="US":
+            labels[0] = "Ultrasound"
         formatted_labels = [labels[0]]
         for label in [labels[1], labels[2], labels[3]]:
             if label is not None:
