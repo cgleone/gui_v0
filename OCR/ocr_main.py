@@ -96,7 +96,6 @@ def run_ocr(file_name):
     print(file_name)
     prepped_pages = prep_image(file_name)
 
-    print(prepped_pages)
     full_text = ""
     for page in prepped_pages:
         page_text = get_text(page)

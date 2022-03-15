@@ -75,7 +75,6 @@ class DB_Connection:
     def get_report_date(self, report_ID):
         query = "SELECT Exam_Date FROM labels WHERE Report_ID='%s'"
         self.cursor.execute(query % report_ID)
-        print(report_ID)
         datetime = self.cursor.fetchone()
         # print(datetime)
         try:
@@ -145,7 +144,6 @@ class DB_Connection:
 
     def search_with_super_variable_query(self, query_after_where):
         query = "SELECT Report_ID FROM labels WHERE" + query_after_where
-        print("query: {}".format(query))
         self.cursor.execute(query)
         return self.cursor.fetchall()
 
@@ -188,7 +186,6 @@ class DB_Connection:
     def get_id_institutions(self, physician_id, formal_name):
         # query = "SELECT id_institutions FROM institutions WHERE physician_id = %s and formal_name = \"%s\""
         query = "SELECT id_institutions FROM institutions WHERE physician_id = {} and formal_name = \"{}\"".format(physician_id, formal_name)
-        print(query)
         # self.cursor.execute(query % values)
         self.cursor.execute(query)
         return self.cursor.fetchall()

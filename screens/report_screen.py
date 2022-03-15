@@ -351,8 +351,6 @@ class ReportScreen(QWidget):
                     item = self.report_table.item(row, col)
                     item.setBackground(QBrush(QColor('white')))
 
-        print(self.current_selected_rows)
-
     def exit_label_correction_mode(self):
         self.label_correction_layout.removeWidget(self.correction_instructions)
         self.label_correction_layout.removeWidget(self.done_correction_button)
@@ -485,7 +483,7 @@ class ReportScreen(QWidget):
     def show_directory(self):
         # self.explorer = QFileDialog.getOpenFileName(self, 'Open File', '/Users/cathleenl/Documents/data_stuff')[0]
         self.explorer = \
-        QFileDialog.getOpenFileName(self, 'Open File', '/Users/cathleenl/Documents/ocr_validation/')[0]
+        QFileDialog.getOpenFileName(self, 'Open File', '/Users/cathleenl/Documents/Imaging File Inbox/')[0]
 
     def create_dialog_for_later(self):
         self.dialog = QDialog()
