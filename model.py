@@ -280,6 +280,9 @@ class Model():
             formatted_labels = ['X-ray']
         else:
             formatted_labels = [labels[0]]
+        if labels[0]=="US":
+            labels[0] = "Ultrasound"
+        formatted_labels = [labels[0]]
         for label in [labels[1], labels[2], labels[3]]:
             if label is not None:
                 new_label = str.title(str.lower(label))

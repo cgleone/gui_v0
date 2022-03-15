@@ -84,6 +84,7 @@ class NbModel(TrainingModel):
         cv = CountVectorizer(strip_accents='ascii', token_pattern=u'(?ui)\\b\\w*[a-z]+\\w*\\b', lowercase=True, stop_words='english')
         X_train_cv = cv.fit_transform(X_train)
         X_test_cv = cv.transform(X_test)
+        self.cv = cv
 
         self.naive_bayes.fit(X_train_cv, y_train)
         predictions = self.naive_bayes.predict(X_test_cv)
@@ -106,7 +107,21 @@ class NbModel(TrainingModel):
         
         return
 
-    def evaluate(self, test_data_snapshot):
+    def evaluate(self, df):
         """Evaluate model performance on held-out test data and record test evaluation metrics"""
         
-        pass
+        X_test = df['text']
+        y_test = df['label']
+
+        X_test_cv = self.cv.transform(X_test)
+        
+
+        predictions = self.naive_bayes.predict(X_test_cv)
+
+        eval_metrics = {
+            'accuracy': accuracy_score(y_test, predictions),
+            'precision': precision_score(y_test, predictions, average='weighted'),
+            'recall': recall_score(y_test, predictions, average='weighted')
+        }
+
+        return eval_metrics

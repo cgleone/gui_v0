@@ -51,7 +51,8 @@ class NerModel(TrainingModel):
         If trained_model_url is from s3, it will load from s3. However, it can also load local files
         If we don't get a pre-trained model, load from a base model and make a token classifier
         """
-        if path := self.parameters.get('trained_model_url', None):
+        if self.parameters.get('trained_model_url', None):
+            path = self.trained_model_url
             if path.startswith('s3://'):
                 print('Loading nn from AWS (this could take a while)...')
             self.nn = load_nn_from_aws(path)
@@ -426,20 +427,21 @@ class NerModel(TrainingModel):
             labels.setdefault(k, {}).setdefault('label', labels[k].get('true text', None))
 
         # Parse date into right format
-        if date := labels['Date Taken']['label']:
+        if labels['Date Taken']['label']:
+            date = labels['Date Taken']['label']
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 labels['Date Taken']['label'] = dateparser.parse(date).strftime('%Y-%m-%d')
 
         # Find closest clinic name
-        if clinic_name := labels['Clinic Name']['label']:
-            match, _ = process.extractOne(clinic_name, CLINIC_NAME_LIST)
+        if labels['Clinic Name']['label']:
+            match, _ = process.extractOne(labels['Clinic Name']['label'], CLINIC_NAME_LIST)
             labels['Clinic Name']['label'] = match
 
         # Find closest string match and convert to category
         for k, true_labels in zip(['Modality', 'Body Part'], [TRUE_MODALITY_LABELS, TRUE_BODY_PART_LABELS]):
-            if true_text := labels[k].get('true text', None):
-                match, _ = process.extractOne(true_text, true_labels.keys())
+            if labels[k]['label']:
+                match, _ = process.extractOne(labels[k]['label'], true_labels.keys())
                 labels[k]['label'] = true_labels[match]
         return labels
 
