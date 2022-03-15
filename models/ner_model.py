@@ -427,7 +427,8 @@ class NerModel(TrainingModel):
             labels.setdefault(k, {}).setdefault('label', labels[k].get('true text', None))
 
         # Parse date into right format
-        if date := labels['Date Taken']['label']:
+        if labels['Date Taken']['label']:
+            date = labels['Date Taken']['label']
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 labels['Date Taken']['label'] = dateparser.parse(date).strftime('%Y-%m-%d')
