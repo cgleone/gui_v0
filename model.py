@@ -81,9 +81,9 @@ class Model():
         self.read_csv()
 
     def set_nlp_params(self):
-        with open( '/Users/cathleenl/Documents/param_files/ner_params', 'rb') as f:
+        with open( '/Users/Wong/NLP_stuff/NER_params', 'rb') as f:
             parameters = pickle.load(f)
-        parameters['trained_model_url'] = '/Users/cathleenl/Documents/param_files/ner_model'
+        parameters['trained_model_url'] = '/Users/Wong/NLP_stuff/NER_model'
         self.nlp_model.set_parameters(parameters)
 
     def update_clinician_list(self):

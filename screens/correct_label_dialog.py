@@ -4,7 +4,8 @@ import screens.supporting_classes as helpers
 from PyQt5.QtGui import QPixmap, QBrush, QColor, QFont, QCloseEvent
 from PyQt5.QtWidgets import QWidget, QScrollArea, QGridLayout
 from PIL import Image
-from datetime import datetime
+from datetime import datetime, date
+import sys
 
 from PyQt5.QtCore import Qt, QThread, QRect, pyqtSignal, QDateTime
 
@@ -158,7 +159,10 @@ class CorrectLabelDialog(QDialog):
         self.bodypart_dropdown.setCurrentText(report_labels[1])
         self.institution_text.setText(report_labels[2])
         self.clinician_text.setText(report_labels[3])
-        self.date_picker.setDateTime(datetime.strptime(report_labels[4], '%Y-%m-%d'))
+        if (report_labels[4] == " " or report_labels[4] == "" or datetime.strptime(report_labels[4], '%Y-%m-%d')>datetime.now()):
+            self.date_picker.setDateTime(datetime.now())
+        else:
+            self.date_picker.setDateTime(datetime.strptime(report_labels[4], '%Y-%m-%d'))
 
     def set_institution_completer(self, current_institutions):
         self.completer = QCompleter(current_institutions)
