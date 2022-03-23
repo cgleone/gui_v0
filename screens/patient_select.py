@@ -79,7 +79,6 @@ class PatientSelectScreen(QWidget):
 
     def populate_table(self, patient_data):
         self.patient_table.setRowCount(len(patient_data))
-        print(patient_data)
         if patient_data is None:
             return
         for i in range(len(patient_data)):

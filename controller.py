@@ -122,7 +122,6 @@ class Controller:
         self.view.setStyleSheet("")
 
     def cancel_label_correction_dialog(self):
-        print('hello')
         self.view.close_label_correction_dialog()
 
     def done_label_correction_dialog(self):

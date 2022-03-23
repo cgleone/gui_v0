@@ -1,5 +1,8 @@
 import pickle
 import shutil
+
+import textract
+
 from OCR import ocr_main
 import os
 from database_connector import DB_Connection
@@ -76,7 +79,7 @@ class Model():
                            "08": ["august", "aug"], "09": ["september","sept"], "10": ["october", "oct"],
                            "11": ["november", "nov"], "12": ["december", "dec"]}
 
-
+        self.short_form_clinician_dictionary = {}
         self.clinicians_in_db = self.update_clinician_list()
         self.read_csv()
 
@@ -89,7 +92,37 @@ class Model():
     def update_clinician_list(self):
         clinicians = self.db_connection.get_all_clinicians()
         clin_list = list(set(self.get_untupled_label_list(clinicians)))
-        print(clin_list)
+
+        for doctor_name in clin_list:
+            if doctor_name not in self.short_form_clinician_dictionary.keys():
+                short_forms = []
+                if '.' in doctor_name:
+                    split_by_period = doctor_name.split('.')
+                    for og_sf in split_by_period:
+                        sf = og_sf
+                        if sf[-1] == ' ':
+                            sf = sf.rstrip(' ')
+                        if sf[0] == ' ':
+                            sf = sf.lstrip(' ')
+                        if not (len(sf) == 1 or sf == "dr" or sf == '' or sf == "Dr"):
+                            if " " in sf:
+                                split_by_space = sf.split(' ')
+                                for word in split_by_space:
+                                    short_forms.append(word.lower())
+                            else:
+                                short_forms.append(sf.lower())
+                elif ' ' in doctor_name:
+                    split_by_space = doctor_name.split(' ')
+                    for og_sf in split_by_space:
+                        sf = og_sf.rstrip(' ')
+                        sf = sf.lstrip(' ')
+                        if len(sf) == 1 or sf == "dr" or sf == '' or sf == "Dr":
+                            split_by_space.remove(og_sf)
+                        else:
+                            short_forms.append(sf.lower())
+
+                # print(doctor_name, short_forms)
+                self.short_form_clinician_dictionary[doctor_name] = short_forms
         return clin_list
 
     def set_current_patient_ID(self, ID):
@@ -101,8 +134,6 @@ class Model():
     def get_patient_name(self):
         first = self.db_connection.get_patient_first_name(self.current_patient_ID)[0][0]
         last = self.db_connection.get_patient_last_name(self.current_patient_ID)[0][0]
-        print(first)
-        print(last)
         return first + ' ' + last
 
     def set_filter_options(self):
@@ -168,9 +199,18 @@ class Model():
         filename = path.split('/')[-1]
         id = str(self.db_connection.generate_report_id())
         shutil.copy(path, self.get_unique_report_paths(filename, id)[0])
-        shutil.copy(path, 'OCR/reports_temp/'+filename)
-        ocr_ran_successfully = self.call_ocr(filename, id)
-        if ocr_ran_successfully:
+        success_reading_pdf = True
+        text = self.read_without_ocr(path)
+        if len(text) < 100000000: # just deal with this later
+            print(len(text))
+            print(text)
+            got_ocr_text, text = self.call_ocr(filename, id, path)
+            if not got_ocr_text:
+                success_reading_pdf = False
+
+        self.save_report_text(filename, id, text)
+
+        if success_reading_pdf:
             #label_args = self.call_fake_nlp(id)
             label_args = self.call_nlp(id)
         else:
@@ -178,17 +218,18 @@ class Model():
         self.db_connection.add_labels(label_args)
         self.deal_with_institution(id)
 
+    def read_without_ocr(self, path_to_pdf):
+        text = textract.process(path_to_pdf).decode('utf-8')
+        return text
 
-
-    def call_ocr(self, filename, id):
+    def call_ocr(self, filename, id, path):
+        shutil.copy(path, 'OCR/reports_temp/'+filename)
         try:
             report_text = ocr_main.run_ocr(filename)
-            self.save_ocr_result(filename, id, report_text)
-            return True
+            return True, report_text
         except:
             report_text = " "
-            self.save_ocr_result(filename, id, report_text)
-            return False
+            return False, report_text
 
     def call_fake_nlp(self, report_id):
         labels = generate_random_tags()
@@ -213,7 +254,7 @@ class Model():
         text_path = 'report_texts/' + filename + "_" + id + '.txt'
         return file_path, text_path
 
-    def save_ocr_result(self, report_name, id, result):
+    def save_report_text(self, report_name, id, result):
         file_path, text_path = self.get_unique_report_paths(report_name, id)
         file = open(text_path, "w+")
         file.write(result)
@@ -227,14 +268,18 @@ class Model():
         text = file.read()
         file.close()
 
-        snapshot = {k: Document({'text': v}) for k, v in {'0': text}.items()}
-        labelled_reports = self.nlp_model._label_snapshot(snapshot)
-        print("labelled reports: \n")
-        print(labelled_reports)
+        # snapshot = {k: Document({'text': v}) for k, v in {'0': text}.items()}
+        # labelled_reports = self.nlp_model._label_snapshot(snapshot)
+        # print("labelled reports: \n")
+        # print(labelled_reports)
         nlp_data = self.nlp_model.predict({'0': text})['0']
         labels = [nlp_data['Modality'], nlp_data['Body Part'], nlp_data['Clinic Name'],
                   nlp_data['Doctor Name'], nlp_data['Date Taken']]
         print(nlp_data)
+        if labels[0] is None:
+            formatted_labels = ['X-ray']
+        else:
+            formatted_labels = [labels[0]]
         if labels[0]=="US":
             labels[0] = "Ultrasound"
         formatted_labels = [labels[0]]
@@ -247,9 +292,6 @@ class Model():
 
         formatted_labels.append(labels[4])
 
-        # mod_display = self.get_display_name(labels[0])
-        # bp_display = self.get_display_name(labels[1])
-        # label_args = [self.current_patient_ID, report_id] + labels + [mod_display, bp_display]
         label_args = [self.current_patient_ID, report_id] + formatted_labels
         return label_args
 
@@ -402,7 +444,6 @@ class Model():
         display_data.reverse()
         data_with_IDs.reverse()
         self.current_display_data_with_IDs = data_with_IDs
-        print("display data: {}".format(display_data))
         self.current_report_IDs.reverse()
         return display_data
 
@@ -583,26 +624,25 @@ class Model():
     def search_labels_by_partial_sf_query(self, partial_query):
         labels_present = []
         if any(partial_query.lower() in map(str.lower, sf_list) for sf_list in self.short_form_dictionary.values()):
-            labels_present = self.get_full_label_name(partial_query.lower())
+            labels_present = self.get_full_label_name(partial_query.lower(), self.short_form_dictionary)
+        if any(partial_query.lower() in map(str.lower, sf_list) for sf_list in self.short_form_clinician_dictionary.values()):
+            labels_present = self.get_full_label_name(partial_query.lower(), self.short_form_clinician_dictionary)
         if partial_query.lower() in map(str.lower, self.short_form_dictionary.keys()):
             labels_present = labels_present + [partial_query]
         # get any institution labels:
         labels_present = labels_present + self.get_institution_labels(partial_query)
         return labels_present
 
-    def get_full_label_name(self, value):
+    def get_full_label_name(self, value, dictionary):
         full_names = []  # could maybe be more than one answer (ideally just 1 though)
-        for label in self.short_form_dictionary.keys():
-            if value in self.short_form_dictionary[label]:
+        for label in dictionary.keys():
+            if value in dictionary[label]:
                 full_names.append(label)
         return full_names
 
     def apply_search_labels(self, labels):
         category_set = list(set([label.type for label in labels]))
         label_values = [label.value for label in labels]
-
-        print("category set: {}".format(category_set))
-        print("label values: {}".format(label_values))
 
         category_count = len(category_set)
         unique_label_values = len(label_values)  # we already know that all values in label_values are unique because we created it that way
@@ -640,7 +680,7 @@ class Model():
                 labels_by_category_dict[category] = []
             for label in labels:
                 labels_by_category_dict[label.type].append(label.value)
-            print(labels_by_category_dict)
+            # print(labels_by_category_dict)
 
             # we should now have a dict (for the above example) that is:
             # {"bodypart": ['Upper Limbs', 'Lower Limbs'], "modality": ['X-ray']
@@ -668,7 +708,14 @@ class Model():
             print("No labels found - reached else statement in apply_search_labels()")
             ids = []
 
-        return ids
+        final_ids = []
+        current_patient_reports_ids = self.db_connection.get_report_IDs(self.current_patient_ID)
+        for item in current_patient_reports_ids:
+            str_id = str(item[0])
+            weird_tuple_id = (str_id,)
+            if weird_tuple_id in ids:
+                final_ids.append(weird_tuple_id)
+        return final_ids
 
     def search(self, user_query):
 
@@ -678,10 +725,9 @@ class Model():
         if len(labels_searched_for) == 0 and date_in_search == [[], []]:
             return [[], []]
         elif len(labels_searched_for) > 0:
-            print("labels searched for: {}".format(labels_searched_for))
+            # print("labels searched for: {}".format(labels_searched_for))
             labels_with_types = self.assign_label_type(labels_searched_for)
             ids_from_labels = self.apply_search_labels(labels_with_types)
-            print("ids from labels: {}".format(ids_from_labels))
             if date_in_search != [[], []]:
                 final_ids = self.search_by_date(ids_from_labels, date_in_search[0], date_in_search[1])
             else:
@@ -799,9 +845,6 @@ class Model():
         desired_institutions = []
         for i in range(len(short_forms)):
             test = short_forms[i]
-            blah = user_query.lower()
-            print(test)
-            bluh = test.lower()
             if user_query.lower() == test.lower():
                 inst = self.all_institutions['Names'][i]
                 desired_institutions.append(inst)

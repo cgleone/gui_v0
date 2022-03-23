@@ -31,6 +31,7 @@ def get_text(file):
 
     converted = pytesseract.image_to_string(img)
     cv2.imwrite('OCR/post_processing_images/' + file, img)
+    print('OCR/post_processing_images/' + file)
 
     os.remove(path)  # removes the prepped image
     return converted
@@ -96,7 +97,6 @@ def run_ocr(file_name):
     print(file_name)
     prepped_pages = prep_image(file_name)
 
-    print(prepped_pages)
     full_text = ""
     for page in prepped_pages:
         page_text = get_text(page)
