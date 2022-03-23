@@ -201,7 +201,7 @@ class Model():
         shutil.copy(path, self.get_unique_report_paths(filename, id)[0])
         success_reading_pdf = True
         text = self.read_without_ocr(path)
-        if len(text) < 10:
+        if len(text) < 100000000: # just deal with this later
             print(len(text))
             print(text)
             got_ocr_text, text = self.call_ocr(filename, id, path)

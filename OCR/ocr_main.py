@@ -31,6 +31,7 @@ def get_text(file):
 
     converted = pytesseract.image_to_string(img)
     cv2.imwrite('OCR/post_processing_images/' + file, img)
+    print('OCR/post_processing_images/' + file)
 
     os.remove(path)  # removes the prepped image
     return converted
