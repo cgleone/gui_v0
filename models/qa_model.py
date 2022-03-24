@@ -124,5 +124,5 @@ class QaModel(TrainingModel):
         """
 
         self.update_inputs(input_docs)
-        self.update_results()
+        # self.update_results()
         return self.get_results()

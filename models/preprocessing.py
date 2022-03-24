@@ -225,7 +225,7 @@ def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path, type_label='
 
             temp = {"title": row['id'], "paragraphs": []}
             qas = []
-        
+            text = row['text'].replace('\n', ' ')
             for q, (label_type, labels) in zip(questions, relevant_labels.items()):
                 
                 if labels is not None:
@@ -234,7 +234,7 @@ def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path, type_label='
                 else: 
                     break
                 
-                offset = row['text'].find(ans_text)
+                offset = text.find(ans_text)
                 
                 if offset != -1:
                     qa = {
@@ -263,9 +263,9 @@ def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path, type_label='
                     }
                 
                 qas.append(qa)
-
+            
             temp['paragraphs'] = [{
-                'context': row['text'],
+                'context': text,
                 'qas': qas
             }]
         

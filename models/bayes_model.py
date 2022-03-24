@@ -125,3 +125,26 @@ class NbModel(TrainingModel):
         }
 
         return eval_metrics
+
+    def predict(self, df):
+        """
+        Do inference predictions on list of input texts.
+
+        Parameters:
+        -----------
+        df: pd.DataFrame()
+            Input text to predict
+        Returns:
+        --------
+        predictions: 
+            Array of predicted labels
+        """
+        
+        X_test = df['text']
+        X_test_cv = self.cv.transform(X_test)
+
+        predictions = self.naive_bayes.predict(X_test_cv)
+
+        self.update_inputs(df)
+        # self.update_results()
+        return predictions
