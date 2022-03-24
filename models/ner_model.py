@@ -431,7 +431,8 @@ class NerModel(TrainingModel):
             date = labels['Date Taken']['label']
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                labels['Date Taken']['label'] = dateparser.parse(date).strftime('%Y-%m-%d')
+                dt = dateparser.parse(date)
+                labels['Date Taken']['label'] = dt.strftime('%Y-%m-%d') if dt else None
 
         # Find closest clinic name
         if labels['Clinic Name']['label']:
