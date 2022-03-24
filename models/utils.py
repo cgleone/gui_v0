@@ -3,7 +3,7 @@ import time
 import boto3
 from smart_open import open
 import pickle
-
+from thefuzz import fuzz
 import torch
 import pandas as pd
 
@@ -272,3 +272,84 @@ def load_model_list_from_aws(s3_bucket='ty-capstone-test', s3_key='model_trainin
     read_file = client.get_object(Bucket=s3_bucket, Key=s3_key)
     df = pd.read_csv(read_file['Body'])
     return df
+
+
+def score_tags(doc, pred):
+    """Score tag predictions made by model
+    Body part, modality, and date taken are scored by exact match to the label in the Document
+    Doctor name is scored by ensuring the last name was contained in the extracted tag
+    Clinic name is fuzzy matched from the extracted tag
+
+    Parameters
+    ----------
+    doc : Document
+        Document containing true tags and text
+    pred : dict
+        Dictionary output from model predict with keys ['Body Part', 'Modality', 'Clinic Name', 'Date Taken',
+        'Doctor Name'] and values as the tags the model predicts for the same document.
+
+    Returns
+    -------
+    dict
+        score, dict with same keys as pred and values of scores (mostly 1/0 but float for clinic name fuzzy match)
+    """
+    score = {}
+
+    for k in ['Body Part', 'Modality', 'Clinic Name', 'Date Taken', 'Doctor Name']:
+        true_tag = doc[k]['label']
+        pred_tag = pred[k]
+
+        if k == 'Doctor Name':
+            true_tag = true_tag.split()[-1]  # Grab only last name
+
+        if pred_tag is None:  # No tag predicted, score 0
+            score[k] = 0
+        elif k == 'Doctor Name' and true_tag in pred_tag:  # Last name in predicted tag
+            score[k] = 1
+        elif k == 'Clinic Name':  # Fuzzy match score normalized to [0, 1]
+            score[k] = fuzz.ratio(true_tag, pred_tag) / 100
+        elif true_tag == pred_tag:  # Most things are just exact match
+            score[k] = 1
+        else:
+            score[k] = 0
+    return score
+
+
+def evaluate_ner_model(model, snapshot, return_results=False):
+    """Evalute performance of NER model on a snapshot
+
+    Parameters
+    ----------
+    model : NerModel
+        Pre-trained NerModel that has been initialized and parameters set
+    snapshot : dict of Document
+        snapshot to evaluate performance
+    return_results : bool, optional
+        whether to return results by document, by default False
+
+    Returns
+    -------
+    dict
+        if return_results is True, dict with keys the same as snapshot document IDs, values as
+        results per document.
+        if return_results is False, dict with keys for each of the tags, values as the aggregate
+        score for all documents in the snapshot
+    """
+    input = {k: doc.text for k, doc in snapshot.items()}
+    all_pred = model.predict(input)
+    results = {}
+    for k in snapshot.keys():
+        pred = all_pred[k]
+        doc = snapshot[k]
+        results[k] = score_tags(doc, pred)
+    if return_results:
+        return results
+
+    agg = {}
+    for v in results.values():
+        for k, score in v.items():
+            agg.setdefault(k, []).append(score)
+    for k in agg:
+        item = agg[k]
+        agg[k] = sum(item) / len(item)
+    return agg
