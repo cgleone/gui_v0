@@ -2,7 +2,7 @@ from .training_model_api import TrainingModel
 from .preprocessing import get_iob_entity_encoding, ner_preprocess, text_split_preprocess, df_to_dataloader, Document
 from .preprocessing import entity_labels
 from .utils import CLINIC_NAME_LIST, TRUE_MODALITY_LABELS, TRUE_BODY_PART_LABELS
-from .utils import load_nn_from_aws
+from .utils import load_nn_from_aws, score_tags
 
 from transformers import AutoTokenizer, AutoModelForTokenClassification
 from sklearn.metrics import accuracy_score, confusion_matrix
@@ -469,8 +469,44 @@ class NerModel(TrainingModel):
             output[rep_id] = temp
         return output
 
-    def evaluate(self, test_data_snapshot):
-        """Evaluate model performance on held-out test data and record test evaluation metrics"""
-        labelled_reports = self._label_snapshot(test_data_snapshot)
-        # TODO: Compute metric for that document in the snapshot
-        pass
+    def evaluate(self, snapshot, return_results=False):
+        """Evalute performance of NER model on a snapshot
+
+        Parameters
+        ----------
+        snapshot : dict of Document
+            snapshot to evaluate performance, held out test data or validation data
+        return_results : bool, optional
+            whether to return results by document, by default False
+
+        Returns
+        -------
+        dict
+            if return_results is True, dict with keys the same as snapshot document IDs, values as
+            results per document.
+            if return_results is False, dict with keys for each of the tags, values as the aggregate
+            score for all documents in the snapshot
+        """
+        labelled_reports = self._label_snapshot(snapshot)
+        # Grab only labels
+        all_pred = {}
+        for rep_id, labels in labelled_reports.items():
+            temp = {k: v['label'] for k, v in labels.items()}
+            all_pred[rep_id] = temp
+
+        results = {}
+        for k in snapshot.keys():
+            pred = all_pred[k]
+            doc = snapshot[k]
+            results[k] = score_tags(doc, pred)
+        if return_results:
+            return results
+        # Aggregate average per tag type
+        agg = {}
+        for v in results.values():
+            for k, score in v.items():
+                agg.setdefault(k, []).append(score)
+        for k in agg:
+            item = agg[k]
+            agg[k] = sum(item) / len(item)
+        return agg
