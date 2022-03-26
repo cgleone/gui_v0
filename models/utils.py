@@ -296,9 +296,13 @@ def score_tags(doc, pred):
     score = {}
 
     for k in ['Body Part', 'Modality', 'Clinic Name', 'Date Taken', 'Doctor Name']:
-        true_tag = doc[k]['label']
+        true_tag = doc[k]
         pred_tag = pred[k]
 
+        if not true_tag:  # Sometimes no label in doc
+            continue
+
+        true_tag = true_tag['label']
         if k == 'Doctor Name':
             true_tag = true_tag.split()[-1]  # Grab only last name
 
