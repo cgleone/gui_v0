@@ -154,7 +154,7 @@ class NerModel(TrainingModel):
 
             # compute training accuracy
             flattened_targets = labels.view(-1)  # shape (batch_size * seq_len,)
-            active_logits = tr_logits.view(-1, self.nn.num_labels)  # shape (batch_size * seq_len, num_labels)
+            active_logits = tr_logits.view(-1, self.num_labels)  # shape (batch_size * seq_len, num_labels)
             flattened_predictions = torch.argmax(active_logits, axis=1)  # shape (batch_size * seq_len,)
 
             # only compute accuracy at active labels
