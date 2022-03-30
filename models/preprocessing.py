@@ -561,11 +561,12 @@ def ner_preprocess(snapshot, tokenizer, entity_labels, max_seq_len=512, stride=1
             label_data = document.get(label_type, None)
             if label_data is None:
                 continue
-            word = label_data['true text']
-            # Search for the word in the text
-            flags = re.I if label_type == 'Clinic Name' else 0  # Ignore case when searching for clinic name
-            for match in re.finditer(word, text, flags=flags):
-                entity_spans.append((match.span(), token_type))
+            words = label_data['true text'].split(', ')  # Split up X-RAY from procedure
+            for word in words:
+                # Search for the word in the text
+                flags = re.I if label_type == 'Clinic Name' else 0  # Ignore case when searching for clinic name
+                for match in re.finditer(word, text, flags=flags):
+                    entity_spans.append((match.span(), token_type))
         if not entity_spans:
             warnings.warn(UserWarning(f'No entities found in this text: {_id}'))
             continue
