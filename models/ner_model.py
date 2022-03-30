@@ -503,8 +503,10 @@ class NerModel(TrainingModel):
             return results
         # Aggregate average per tag type
         agg = {}
-        for v in results.values():
+        for doc_id, v in results.items():
             for k, score in v.items():
+                # if k == 'Modality' and snapshot[doc_id]['Modality']['label'] == 'X-RAY':  # Skip X-RAY for now
+                #     continue
                 agg.setdefault(k, []).append(score)
         for k in agg:
             item = agg[k]
