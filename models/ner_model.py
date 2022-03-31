@@ -154,7 +154,7 @@ class NerModel(TrainingModel):
 
             # compute training accuracy
             flattened_targets = labels.view(-1)  # shape (batch_size * seq_len,)
-            active_logits = tr_logits.view(-1, self.nn.num_labels)  # shape (batch_size * seq_len, num_labels)
+            active_logits = tr_logits.view(-1, self.num_labels)  # shape (batch_size * seq_len, num_labels)
             flattened_predictions = torch.argmax(active_logits, axis=1)  # shape (batch_size * seq_len,)
 
             # only compute accuracy at active labels
@@ -503,8 +503,10 @@ class NerModel(TrainingModel):
             return results
         # Aggregate average per tag type
         agg = {}
-        for v in results.values():
+        for doc_id, v in results.items():
             for k, score in v.items():
+                # if k == 'Modality' and snapshot[doc_id]['Modality']['label'] == 'X-RAY':  # Skip X-RAY for now
+                #     continue
                 agg.setdefault(k, []).append(score)
         for k in agg:
             item = agg[k]
