@@ -46,6 +46,16 @@ TRUE_MODALITY_LABELS = {
     'X-RAY, PORTABLE AP': 'X-RAY',
     'X-RAY, PORT.': 'X-RAY',
     'X-RAY, CHEST (SINGLE VIEW)': 'X-RAY',
+    'AP & LAT': 'X-RAY',
+    'SUPINE & ERECT': 'X-RAY',
+    'PORTABLE': 'X-RAY',
+    'PRE-OP PA & LAT': 'X-RAY',
+    'BABYGRAM': 'X-RAY',
+    'AP CXR': 'X-RAY',
+    'PA & LAT': 'X-RAY',
+    'PORTABLE AP': 'X-RAY',
+    'PORT.': 'X-RAY',
+    'CHEST (SINGLE VIEW)': 'X-RAY',
     'SUPINE ONLY': None}
 
 CLINIC_NAME_LIST = pd.read_csv('gui_v0/institution_list.csv')['Names'].tolist()
@@ -306,6 +316,8 @@ def score_tags(doc, pred):
         if k == 'Doctor Name':
             true_tag = true_tag.split()[-1]  # Grab only last name
 
+        # if true_tag == 'X-RAY':
+        #     continue
         if pred_tag is None:  # No tag predicted, score 0
             score[k] = 0
         elif k == 'Doctor Name' and true_tag in pred_tag:  # Last name in predicted tag
