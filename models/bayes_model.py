@@ -57,7 +57,7 @@ class NbModel(TrainingModel):
         """
         
         if generate_labels:
-            df = cls_preprocess(data_snapshot, self.tokenizer, 'Modality')
+            df = cls_preprocess(data_snapshot, self.tokenizer, self.type)
         else:
             df = text_split_preprocess(data_snapshot, self.tokenizer, self.max_seq_len, self.stride)
         return df

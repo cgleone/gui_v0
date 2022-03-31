@@ -229,8 +229,11 @@ def qa_preprocess(snapshot, tokenizer, max_seq_len, json_save_path, type_label='
             for q, (label_type, labels) in zip(questions, relevant_labels.items()):
                 
                 if labels is not None:
-
-                    ans_text = labels['true text']
+                    if labels['label'] == 'X-RAY':
+                        ans_text_parts = labels['true text'].split(',')
+                        ans_text = ans_text_parts[1].lstrip(' ')
+                    else:
+                        ans_text = labels['true text']
                 else: 
                     break
                 

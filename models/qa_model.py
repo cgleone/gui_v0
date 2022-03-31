@@ -29,7 +29,7 @@ class QaModel(TrainingModel):
         """
         super().set_parameters(parameters)
         self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_url)
-        self.reader = FARMReader(self.qaModel, use_gpu=True, num_processes=1, return_no_answer=True, top_k=3)
+        self.reader = FARMReader(self.qaModel, use_gpu=self.use_cuda, num_processes=1, return_no_answer=True, top_k=3)
         # Load a pre-trained network saved on AWS
         if self.parameters.get('trained_model_url', None):
             print('Loading nn from AWS (this could take a while)...')
@@ -180,9 +180,9 @@ class QaModel(TrainingModel):
                         dt = dateparser.parse(date)
                         value['Date Taken']['label'] = dt.strftime('%Y-%m-%d') if dt else None
 
-            if value['Clinic Name']['label']:
-                match, _ = process.extractOne(value['Clinic Name']['label'], CLINIC_NAME_LIST)
-                value['Clinic Name']['label'] = match
+            # if value['Clinic Name']['label']:
+                # match, _ = process.extractOne(value['Clinic Name']['label'], CLINIC_NAME_LIST)
+                # value['Clinic Name']['label'] = match
 
             for k, true_labels in zip(['Modality', 'Body Part'], [TRUE_MODALITY_LABELS, TRUE_BODY_PART_LABELS]):
                     if value[k]['label']:
